@@ -2,12 +2,6 @@ package hp.compiler
 
 import java.io.File
 
-/**
- * \n and ; delimit new statements
- * << is like std::out, >> is like std::in, and <<! is like std::err
- * Comments can start with #
- */
-
 class CompilationException(message: String) : Exception(message)
 
 class Output {
