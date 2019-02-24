@@ -172,4 +172,87 @@ class TestAbstractSyntaxTree {
 
         assertEquals(expected, result)
     }
+
+    @Test
+    fun parenthesis() {
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.Number, "10"),
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.LeftParenthesis, "("),
+                Token(TokenType.Number, "3"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Number, "2"),
+                Token(TokenType.RightParenthesis, ")")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Minus, "-")).apply {
+            left = LeafNode(ASTState.Number, Token(TokenType.Number, "10"))
+            right = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+                left = LeafNode(ASTState.Number, Token(TokenType.Number, "3"))
+                right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
+            }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun parenthesis_at_beginning() {
+        // (1 + 1) * 2
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.LeftParenthesis, "("),
+                Token(TokenType.Number, "1"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Number, "1"),
+                Token(TokenType.RightParenthesis, ")"),
+                Token(TokenType.Times, "*"),
+                Token(TokenType.Number, "2")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Times, "*")).apply {
+            left = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+                left = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
+                right = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
+            }
+            right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun complex_parenthesis() {
+        // 10 - (3 + 2) / (2-1)
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.Number, "10"),
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.LeftParenthesis, "("),
+                Token(TokenType.Number, "3"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Number, "2"),
+                Token(TokenType.RightParenthesis, ")"),
+                Token(TokenType.Divide, "/"),
+                Token(TokenType.LeftParenthesis, "("),
+                Token(TokenType.Number, "2"),
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.Number, "1"),
+                Token(TokenType.RightParenthesis, ")")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Minus, "-")).apply {
+            left = LeafNode(ASTState.Number, Token(TokenType.Number, "10"))
+            right = BinaryNode(ASTState.Operator, Token(TokenType.Divide, "/")).apply {
+                left = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+                    left = LeafNode(ASTState.Number, Token(TokenType.Number, "3"))
+                    right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
+                }
+                right = BinaryNode(ASTState.Operator, Token(TokenType.Minus, "-")).apply {
+                    left = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
+                    right = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
+                }
+            }
+        }
+
+        assertEquals(expected, result)
+    }
 }

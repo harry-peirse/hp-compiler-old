@@ -4,7 +4,7 @@ class CompilationException(message: String, row: Int, col: Int) : Exception("At 
     constructor(message: String, token: Token): this("token ${token.type} ${token.value} $message", token.row ?: -1, token.col ?: -1)
 }
 
-enum class TokenType {
+enum class TokenType(val orderOfOperationsPriority: Int = -1) {
     // Literals
     Number,
 
@@ -12,10 +12,10 @@ enum class TokenType {
     Identifier,
 
     // Arithmetic Operators
-    Plus,
-    Minus,
-    Times,
-    Divide,
+    Plus(100),
+    Minus(100),
+    Times(10),
+    Divide(10),
 
     // Comparison Operators
     GreaterThan,
@@ -28,8 +28,8 @@ enum class TokenType {
     Assign,
 
     // Parenthesis
-    LeftParenthesis,
-    RightParenthesis,
+    LeftParenthesis(1),
+    RightParenthesis(1),
 
     // Special Tokens
     EndOfInput

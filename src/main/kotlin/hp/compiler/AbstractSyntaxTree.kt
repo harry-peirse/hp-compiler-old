@@ -3,11 +3,15 @@ package hp.compiler
 import kotlin.IllegalStateException
 
 class AbstractSyntaxTree(val tokens: List<Token>) {
-    fun parse() = ASTFSM(tokens).run()
+    val astFsm = AbstractSyntaxTreeFiniteStateMachine(tokens)
+    val index: Int
+        get() = astFsm.index
+    fun parse() = astFsm.run()
 }
 
 sealed class Node(val state: ASTState, val token: Token) {
     abstract val children: List<Node>
+
     var parent: Node? = null
     val depth: Int
         get() {
@@ -58,7 +62,7 @@ class UnaryNode(state: ASTState, token: Token) : Node(state, token) {
 
     override fun hashCode() = state.hashCode() + token.hashCode() + child.hashCode()
 
-    override fun toString() = "\n${"  ".repeat(depth)}UnaryNode $state $token child=($child)"
+    override fun toString() = "UnaryNode  $state $token \n   ${"     ".repeat(depth+1)}$child"
 }
 
 class BinaryNode(state: ASTState, token: Token) : Node(state, token) {
@@ -89,7 +93,7 @@ class BinaryNode(state: ASTState, token: Token) : Node(state, token) {
 
     override fun hashCode() = state.hashCode() + token.hashCode() + left.hashCode() + right.hashCode()
 
-    override fun toString() = "\n${"  ".repeat(depth)}BinaryNode $state $token left=($left) right=($right)"
+    override fun toString() = "BinaryNode $state $token \n${"     ".repeat(depth+1)}L: $left\n${"     ".repeat(depth+1)}R: $right"
 }
 
 class LeafNode(state: ASTState, token: Token) : Node(state, token) {
@@ -105,7 +109,7 @@ class LeafNode(state: ASTState, token: Token) : Node(state, token) {
 
     override fun hashCode() = state.hashCode() + token.hashCode()
 
-    override fun toString() = "\n${"  ".repeat(depth)}LeafNode $state $token"
+    override fun toString() = "LeafNode   $state $token"
 }
 
 enum class ASTState : State {
@@ -113,14 +117,25 @@ enum class ASTState : State {
     Number,
     Operator,
     UnaryOperator,
+    RightParenthesis,
     End
 }
 
-class ASTFSM(val tokens: List<Token>) {
+class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
+
+    var index: Int = 0
+
     fun run(): Node? {
         var state = ASTState.Start
-        return tokens.fold<Token, Node?>(null) { n, it ->
-            var node = n
+        var node: Node? = null
+
+        println(">>> FSM")
+
+        while(index < tokens.size) {
+            val it = tokens[index++]
+
+            println("$state:   ( $index ) -> $it")
+
             state = when (state) {
                 ASTState.Start -> when (it.type) {
                     TokenType.Number -> {
@@ -131,34 +146,31 @@ class ASTFSM(val tokens: List<Token>) {
                         node = UnaryNode(ASTState.UnaryOperator, it)
                         ASTState.UnaryOperator
                     }
+                    TokenType.LeftParenthesis -> {
+                        val ast = AbstractSyntaxTree(tokens.subList(index, tokens.size))
+                        val subTree: Node? = ast.parse()
+                        if(subTree != null) {
+                            node = subTree
+                            index += ast.index
+                            ASTState.RightParenthesis
+                        } else {
+                            index++
+                            ASTState.Start
+                        }
+                    }
                     else -> ASTState.End
                 }
+
                 ASTState.Number -> when (it.type) {
                     TokenType.Plus, TokenType.Minus, TokenType.Times, TokenType.Divide -> {
-                        var left = node
-                        val operatorNode = BinaryNode(ASTState.Operator, it)
-                        if (left is LeafNode) {
-                            var p = left.parent
-                            var c = node
-                            loop@while((p is BinaryNode || p is UnaryNode) && c != null) {
-                                if (p.state == ASTState.UnaryOperator || p.token.type == TokenType.Times || p.token.type == TokenType.Divide ||
-                                        ((it.type == TokenType.Plus || it.type == TokenType.Minus) && (p.token.type == TokenType.Plus || p.token.type == TokenType.Minus))) {
-                                    c = p
-                                    p = p.parent
-                                } else {
-                                    p.replaceChild(c, operatorNode)
-                                    break@loop
-                                }
-                            }
-                            left = c
-                        }
-                        operatorNode.left = left
-                        node = operatorNode
+                        node = insertOperationAccordingToOrderOfOperations(node, it)
                         ASTState.Operator
                     }
+                    TokenType.RightParenthesis -> ASTState.End
                     TokenType.EndOfInput -> ASTState.End
                     else -> throw CompilationException("Failed to parse arithmetic", it)
                 }
+
                 ASTState.UnaryOperator -> when (it.type) {
                     TokenType.Number -> {
                         if (node is UnaryNode) {
@@ -167,8 +179,24 @@ class ASTFSM(val tokens: List<Token>) {
                         } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
                         ASTState.Number
                     }
+                    TokenType.LeftParenthesis -> {
+                        val ast = AbstractSyntaxTree(tokens.subList(index, tokens.size))
+                        val subTree: Node? = ast.parse()
+                        if(subTree != null) {
+                            if (node is UnaryNode) {
+                                node.child = subTree
+                                node = subTree
+                                index += ast.index
+                                ASTState.RightParenthesis
+                            } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
+                        } else {
+                            index++
+                            ASTState.UnaryOperator
+                        }
+                    }
                     else -> throw CompilationException("Failed to parse arithmetic", it)
                 }
+
                 ASTState.Operator -> when (it.type) {
                     TokenType.Plus, TokenType.Minus -> {
                         if (node is BinaryNode) {
@@ -184,11 +212,66 @@ class ASTFSM(val tokens: List<Token>) {
                         } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
                         ASTState.Number
                     }
+                    TokenType.LeftParenthesis -> {
+                        val ast = AbstractSyntaxTree(tokens.subList(index, tokens.size))
+                        val subTree: Node? = ast.parse()
+                        if(subTree != null) {
+                            if (node is BinaryNode) {
+                                node.right = subTree
+                                node = subTree
+                                index += ast.index
+                                ASTState.RightParenthesis
+                            } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
+                        } else {
+                            index++
+                            ASTState.Operator
+                        }
+                    }
                     else -> throw CompilationException("Failed to parse arithmetic", it)
                 }
+
+                ASTState.RightParenthesis -> when(it.type) {
+                    TokenType.Plus, TokenType.Minus, TokenType.Times, TokenType.Divide -> {
+                        node = insertOperationAccordingToOrderOfOperations(node, it)
+                        ASTState.Operator
+                    }
+                    TokenType.EndOfInput -> ASTState.End
+                    else -> throw CompilationException("Expected end of expression or operator", it)
+                }
+
                 ASTState.End -> throw IllegalStateException("Reached end of FSM twice!?")
             }
-            node
-        }?.topAncestor()
+
+            println()
+            println("FULL TREE:")
+            println(node?.topAncestor())
+            println()
+
+            if(state == ASTState.End) break
+        }
+        println("<<< FSM")
+        return node?.topAncestor()
+    }
+
+    private fun insertOperationAccordingToOrderOfOperations(n: Node?, it: Token): Node {
+        var node = n
+        val operatorNode = BinaryNode(ASTState.Operator, it)
+        if (node != null) {
+            var currentParent = node.parent
+            var currentNode = node
+            loop@ while ((currentParent is BinaryNode || currentParent is UnaryNode) && currentNode != null) {
+                if (currentParent.state == ASTState.UnaryOperator || currentParent.token.type.orderOfOperationsPriority <= it.type.orderOfOperationsPriority) {
+                    currentNode = currentParent
+                    currentParent = currentNode.parent
+                } else {
+                    currentParent.replaceChild(currentNode, operatorNode)
+                    break@loop
+                }
+            }
+            node = currentNode
+        }
+        operatorNode.left = node
+
+        return operatorNode
     }
 }
