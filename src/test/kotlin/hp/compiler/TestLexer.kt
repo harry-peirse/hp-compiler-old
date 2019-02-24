@@ -1,6 +1,6 @@
 package hp.compiler
 
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import hp.compiler.Lexer.Companion.isOperator

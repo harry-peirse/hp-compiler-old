@@ -4,23 +4,19 @@ import java.lang.IllegalStateException
 
 interface State
 
-class FSM<T : State>(val initialState: T, val exitState: T, var acceptingStates: Array<T>, val nextState: (T, Char) -> T) {
-    fun run(input: String): Pair<Boolean, String?> {
-        var currentState = initialState
-        var result = ""
-
-        input.forEach {
-            val nextState = nextState(currentState, it)
-
-            if (nextState === exitState) {
-                return@run true to result
+class FSM<S : State, T>(val initialState: S, val exitState: S, val accumulator: MutableList<T> = mutableListOf(), val nextState: (S, T) -> S) {
+    fun run(input: Iterable<T>): List<T> {
+        input.fold(initialState) { state, it ->
+            val nextState = nextState(state, it)
+            when(nextState) {
+                exitState -> return@run accumulator
+                else -> {
+                    accumulator.add(it)
+                    return@fold nextState
+                }
             }
-
-            result += it
-            currentState = nextState
         }
-
-        return acceptingStates.contains(currentState) to result
+        return accumulator
     }
 }
 
@@ -70,7 +66,7 @@ class Lexer(val input: String) {
             return recognizeParenthesis()
         }
 
-        throw CompilationException("Unexpected character '$character' at line $line column $column")
+        throw CompilationException("Unexpected character '$character'", line, column)
     }
 
     fun allTokens(): List<Token> {
@@ -135,16 +131,14 @@ class Lexer(val input: String) {
         // has been recognized or not, it also returns the number
         // recognized in the 'number' variable. If no number has
         // been recognized, 'number' will be 'null'.
-        val result = fsm.run(fsmInput)
-        val isNumberRecognized = result.first
-        val number = result.second
+        val result = fsm.run(fsmInput.toList())
 
-        if (isNumberRecognized && number != null) {
+        if (result.isNotEmpty()) {
             val col = column + 1
-            position += number.length
-            column += number.length
+            position += result.size
+            column += result.size
 
-            return Token(TokenType.Number, number.toLowerCase().replace("+", ""), line, col)
+            return Token(TokenType.Number, result.joinToString("").toLowerCase().replace("+", ""), line, col)
         } else {
             throw IllegalStateException("Unexpected compiler error when inspecting number at line $line and column $column")
         }
@@ -161,14 +155,10 @@ class Lexer(val input: String) {
         NoNextState
     }
 
-    private fun buildNumberRecognizer() = FSM(
+    private fun buildNumberRecognizer() = FSM<NumberRecogniserState, Char>(
             NumberRecogniserState.Initial,
-            NumberRecogniserState.NoNextState,
-            arrayOf(NumberRecogniserState.Integer,
-                    NumberRecogniserState.NumberWithFractionalPart,
-                    NumberRecogniserState.NumberWithExponent
-            )) { currentState, it ->
-        when (currentState) {
+            NumberRecogniserState.NoNextState) { state, it ->
+        when (state) {
             NumberRecogniserState.Initial ->
                 when {
                     it.isDigit() -> NumberRecogniserState.Integer

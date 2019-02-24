@@ -1,5 +1,9 @@
 package hp.compiler
 
+class CompilationException(message: String, row: Int, col: Int) : Exception("At row $row and col $col $message") {
+    constructor(message: String, token: Token): this("token ${token.type} ${token.value} $message", token.row ?: -1, token.col ?: -1)
+}
+
 enum class TokenType {
     // Literals
     Number,
@@ -31,4 +35,4 @@ enum class TokenType {
     EndOfInput
 }
 
-data class Token(val type: TokenType, val value: String, val row: Int, val col: Int)
+data class Token(val type: TokenType, val value: String, val row: Int? = null, val col: Int? = null)
