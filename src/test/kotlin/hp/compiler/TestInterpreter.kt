@@ -23,5 +23,7 @@ class TestInterpreter {
         assertEquals("2.4", Interpreter("4.8/2").run())
 
         assertEquals("2.1", Interpreter("4.2/2").run())
+
+        assertEquals("9", Interpreter("10 - 3 + 2").run())
     }
 }

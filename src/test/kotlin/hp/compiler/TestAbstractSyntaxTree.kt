@@ -58,25 +58,25 @@ class TestAbstractSyntaxTree {
     fun complex_sum() {
         // "-56 + -3 + 2"
         val result = AbstractSyntaxTree(listOf(
-                Token(TokenType.Minus, "-", 1, 1),
-                Token(TokenType.Number, "56", 2, 1),
-                Token(TokenType.Plus, "+", 5, 1),
-                Token(TokenType.Minus, "-", 7, 1),
-                Token(TokenType.Number, "3", 8, 1),
-                Token(TokenType.Plus, "+", 10, 1),
-                Token(TokenType.Number, "2", 12, 1)
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.Number, "56"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.Number, "3"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Number, "2")
         )).parse()
 
-        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+", 5, 1)).apply {
-            left = UnaryNode(ASTState.UnaryOperator, Token(TokenType.Minus, "-", 1, 1)).apply {
-                child = LeafNode(ASTState.Number, Token(TokenType.Number, "56", 2, 1))
-            }
-            right = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+", 10, 1)).apply {
-                left = UnaryNode(ASTState.UnaryOperator, Token(TokenType.Minus, "-", 7, 1)).apply {
-                    child = LeafNode(ASTState.Number, Token(TokenType.Number, "3", 8, 1))
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+            left = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+                left = UnaryNode(ASTState.UnaryOperator, Token(TokenType.Minus, "-")).apply {
+                    child = LeafNode(ASTState.Number, Token(TokenType.Number, "56"))
                 }
-                right = LeafNode(ASTState.Number, Token(TokenType.Number, "2", 12, 1))
+                right = UnaryNode(ASTState.UnaryOperator, Token(TokenType.Minus, "-")).apply {
+                    child = LeafNode(ASTState.Number, Token(TokenType.Number, "3"))
+                }
             }
+            right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
         }
 
         assertEquals(expected, result)
@@ -147,6 +147,27 @@ class TestAbstractSyntaxTree {
                 right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
             }
             right = LeafNode(ASTState.Number, Token(TokenType.Number, "12"))
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun _10_minus_3_plus_2() {
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.Number, "10"),
+                Token(TokenType.Minus, "-"),
+                Token(TokenType.Number, "3"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Number, "2")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+            left = BinaryNode(ASTState.Operator, Token(TokenType.Minus, "-")).apply {
+                left = LeafNode(ASTState.Number, Token(TokenType.Number, "10"))
+                right = LeafNode(ASTState.Number, Token(TokenType.Number, "3"))
+            }
+            right = LeafNode(ASTState.Number, Token(TokenType.Number, "2"))
         }
 
         assertEquals(expected, result)

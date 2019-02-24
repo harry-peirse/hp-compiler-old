@@ -137,20 +137,20 @@ class ASTFSM(val tokens: List<Token>) {
                     TokenType.Plus, TokenType.Minus, TokenType.Times, TokenType.Divide -> {
                         var left = node
                         val operatorNode = BinaryNode(ASTState.Operator, it)
-                        if (node is LeafNode) {
-                            var p = node.parent
+                        if (left is LeafNode) {
+                            var p = left.parent
                             var c = node
                             loop@while((p is BinaryNode || p is UnaryNode) && c != null) {
-                                if (p.state == ASTState.UnaryOperator || p.token.type == TokenType.Times || p.token.type == TokenType.Divide) {
-                                    left = p
+                                if (p.state == ASTState.UnaryOperator || p.token.type == TokenType.Times || p.token.type == TokenType.Divide ||
+                                        ((it.type == TokenType.Plus || it.type == TokenType.Minus) && (p.token.type == TokenType.Plus || p.token.type == TokenType.Minus))) {
+                                    c = p
+                                    p = p.parent
                                 } else {
                                     p.replaceChild(c, operatorNode)
                                     break@loop
                                 }
-
-                                c = p
-                                p = p.parent
                             }
+                            left = c
                         }
                         operatorNode.left = left
                         node = operatorNode
