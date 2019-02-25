@@ -2,7 +2,7 @@ package hp.compiler
 
 import java.math.BigDecimal
 
-class Interpreter(vararg val raw: String) {
+class Interpreter {
 
     val memory: MutableMap<String, Node> = mutableMapOf()
 
@@ -64,7 +64,7 @@ class Interpreter(vararg val raw: String) {
         else -> throw IllegalStateException()
     }
 
-    fun run(): String = raw
+    fun run(vararg raw: String): String = raw
             .map { AbstractSyntaxTree(Lexer(it).allTokens()).parse()?.evaluate() }
             .filterNotNull()
             .joinToString("\n")

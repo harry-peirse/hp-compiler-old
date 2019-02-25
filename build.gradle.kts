@@ -8,7 +8,7 @@ plugins {
 }
 
 application {
-    mainClassName = "hp.compiler.CompilerKt"
+    mainClassName = "hp.compiler.CLIInterpreterKt"
 }
 
 repositories {
@@ -24,6 +24,6 @@ dependencies {
 
 tasks {
     withType<JavaExec> {
-        setArgsString("src/main/hp/Test.hp src/main/hp/Test2.hp")
+        standardInput = System.`in`
     }
 }

@@ -2,6 +2,8 @@ package hp.compiler
 
 import kotlin.IllegalStateException
 
+const val DEBUG_LOGGING = false
+
 class AbstractSyntaxTree(val tokens: List<Token>) {
     val astFsm = AbstractSyntaxTreeFiniteStateMachine(tokens)
     val index: Int
@@ -130,12 +132,12 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
         var state = ASTState.Start
         var node: Node? = null
 
-        println(">>> FSM")
+        if(DEBUG_LOGGING) println(">>> FSM")
 
         while(index < tokens.size) {
             val it = tokens[index++]
 
-            println("$state:   ( $index ) -> $it")
+            if(DEBUG_LOGGING) println("$state:   ( $index ) -> $it")
 
             state = when (state) {
                 ASTState.Start -> when (it.type) {
@@ -271,14 +273,16 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
                 ASTState.End -> throw IllegalStateException("Reached end of FSM twice!?")
             }
 
-            println()
-            println("FULL TREE:")
-            println(node?.topAncestor())
-            println()
+            if(DEBUG_LOGGING) {
+                println()
+                println("FULL TREE:")
+                println(node?.topAncestor())
+                println()
+            }
 
             if(state == ASTState.End) break
         }
-        println("<<< FSM")
+        if(DEBUG_LOGGING)println("<<< FSM")
         return node?.topAncestor()
     }
 
