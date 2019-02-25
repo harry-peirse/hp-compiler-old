@@ -16,7 +16,6 @@ fun main() {
     System.out.println()
 
     Scanner(System.`in`).use {
-
         var input = it.nextLine()
         while (input != "break") {
             try {
@@ -26,6 +25,5 @@ fun main() {
             }
             input = it.nextLine()
         }
-
     }
 }
