@@ -115,6 +115,7 @@ class LeafNode(state: ASTState, token: Token) : Node(state, token) {
 enum class ASTState : State {
     Start,
     Number,
+    Identifier,
     Operator,
     UnaryOperator,
     RightParenthesis,
@@ -141,6 +142,10 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
                     TokenType.Number -> {
                         node = LeafNode(ASTState.Number, it)
                         ASTState.Number
+                    }
+                    TokenType.Identifier -> {
+                        node = LeafNode(ASTState.Identifier, it)
+                        ASTState.Identifier
                     }
                     TokenType.Plus, TokenType.Minus -> {
                         node = UnaryNode(ASTState.UnaryOperator, it)
@@ -171,6 +176,16 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
                     else -> throw CompilationException("Failed to parse arithmetic", it)
                 }
 
+                ASTState.Identifier -> when(it.type) {
+                    TokenType.Assign, TokenType.Plus, TokenType.Minus, TokenType.Times, TokenType.Divide -> {
+                        node = insertOperationAccordingToOrderOfOperations(node, it)
+                        ASTState.Operator
+                    }
+                    TokenType.RightParenthesis -> ASTState.End
+                    TokenType.EndOfInput -> ASTState.End
+                    else -> throw CompilationException("Failed to parse arithmetic", it)
+                }
+
                 ASTState.UnaryOperator -> when (it.type) {
                     TokenType.Number -> {
                         if (node is UnaryNode) {
@@ -178,6 +193,13 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
                             node = node.child
                         } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
                         ASTState.Number
+                    }
+                    TokenType.Identifier -> {
+                        if (node is UnaryNode) {
+                            node.child = LeafNode(ASTState.Identifier, it)
+                            node = node.child
+                        } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
+                        ASTState.Identifier
                     }
                     TokenType.LeftParenthesis -> {
                         val ast = AbstractSyntaxTree(tokens.subList(index, tokens.size))
@@ -211,6 +233,13 @@ class AbstractSyntaxTreeFiniteStateMachine(val tokens: List<Token>) {
                             node = node.right
                         } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
                         ASTState.Number
+                    }
+                    TokenType.Identifier -> {
+                        if (node is BinaryNode) {
+                            node.right = LeafNode(ASTState.Identifier, it)
+                            node = node.right
+                        } else throw IllegalStateException("Expected previous UnaryOperator to be captured in UnaryNode")
+                        ASTState.Identifier
                     }
                     TokenType.LeftParenthesis -> {
                         val ast = AbstractSyntaxTree(tokens.subList(index, tokens.size))

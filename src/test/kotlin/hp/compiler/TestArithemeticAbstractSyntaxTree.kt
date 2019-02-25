@@ -3,7 +3,7 @@ package hp.compiler
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestAbstractSyntaxTree {
+class TestArithemeticAbstractSyntaxTree {
 
     @Test
     fun simple_sum() {
@@ -251,6 +251,40 @@ class TestAbstractSyntaxTree {
                     right = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
                 }
             }
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun variable_assignment() {
+        // a = 1
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.Identifier, "a"),
+                Token(TokenType.Assign, "="),
+                Token(TokenType.Number, "1")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Assign, "=")).apply {
+            left = LeafNode(ASTState.Identifier, Token(TokenType.Identifier, "a"))
+            right = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
+        }
+
+        assertEquals(expected, result)
+    }
+
+    @Test
+    fun variable_use() {
+        // 1 + a
+        val result = AbstractSyntaxTree(listOf(
+                Token(TokenType.Number, "1"),
+                Token(TokenType.Plus, "+"),
+                Token(TokenType.Identifier, "a")
+        )).parse()
+
+        val expected = BinaryNode(ASTState.Operator, Token(TokenType.Plus, "+")).apply {
+            left = LeafNode(ASTState.Number, Token(TokenType.Number, "1"))
+            right = LeafNode(ASTState.Identifier, Token(TokenType.Identifier, "a"))
         }
 
         assertEquals(expected, result)

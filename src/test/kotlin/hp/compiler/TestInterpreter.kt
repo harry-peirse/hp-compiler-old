@@ -26,4 +26,20 @@ class TestInterpreter {
 
         assertEquals("9", Interpreter("10 - 3 + 2").run())
     }
+
+    @Test
+    fun test_memory() {
+        assertEquals("", Interpreter("a = 4").run())
+    }
+
+    @Test
+    fun test_multiple_expressions() {
+        val interpreter = Interpreter(
+                "a = 4",
+                "2 + a"
+        )
+        assertEquals("6", interpreter.run())
+
+        assertEquals<Map<String, Node>>(mapOf("a" to LeafNode(ASTState.Number, Token(TokenType.Number, "4", 1, 5))), interpreter.memory)
+    }
 }

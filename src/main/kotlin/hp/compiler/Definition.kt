@@ -4,12 +4,14 @@ class CompilationException(message: String, row: Int, col: Int) : Exception("At 
     constructor(message: String, token: Token): this("token ${token.type} ${token.value} $message", token.row ?: -1, token.col ?: -1)
 }
 
-enum class TokenType(val orderOfOperationsPriority: Int = -1) {
+enum class TokenType(val orderOfOperationsPriority: Int) {
     // Literals
-    Number,
+    Number(0),
+    Boolean(0),
+    Character(0),
 
     // Identifiers
-    Identifier,
+    Identifier(0),
 
     // Arithmetic Operators
     Plus(100),
@@ -18,21 +20,21 @@ enum class TokenType(val orderOfOperationsPriority: Int = -1) {
     Divide(10),
 
     // Comparison Operators
-    GreaterThan,
-    GreaterThanOrEqualTo,
-    LessThan,
-    LessThanOrEqualTo,
-    EqualTo,
+    GreaterThan(1000),
+    GreaterThanOrEqualTo(1000),
+    LessThan(1000),
+    LessThanOrEqualTo(1000),
+    EqualTo(1000),
 
     // Assignment Operators
-    Assign,
+    Assign(10000),
 
     // Parenthesis
     LeftParenthesis(1),
     RightParenthesis(1),
 
     // Special Tokens
-    EndOfInput
+    EndOfInput(-1)
 }
 
 data class Token(val type: TokenType, val value: String, val row: Int? = null, val col: Int? = null)
