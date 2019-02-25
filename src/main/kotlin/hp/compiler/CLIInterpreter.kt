@@ -17,11 +17,14 @@ fun main() {
 
     Scanner(System.`in`).use {
 
-        while (true) {
-            System.out.print("  > ")
-            val input = it.nextLine()
-            if (input == "break") break
-            System.out.println("  > " + interpreter.run(input))
+        var input = it.nextLine()
+        while (input != "break") {
+            try {
+                System.out.println(interpreter.run(input))
+            } catch (e: CompilationException) {
+                System.err.println(e.message)
+            }
+            input = it.nextLine()
         }
 
     }
