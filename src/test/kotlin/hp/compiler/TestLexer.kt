@@ -11,7 +11,7 @@ class TestLexer {
 
     @Test(expected = CompilationException::class)
     fun compilation_exception() {
-        Lexer("@").nextToken()
+        Lexer("@").nextLexeme()
     }
 
     @Test
@@ -45,105 +45,104 @@ class TestLexer {
 
     @Test
     fun lex_comparison_operators() {
-        assertEquals(Token(TokenType.LessThan, "<", 1, 1), Lexer("<").nextToken())
-        assertEquals(Token(TokenType.LessThanOrEqualTo, "<=", 1, 1), Lexer("<=").nextToken())
-        assertEquals(Token(TokenType.GreaterThan, ">", 1, 1), Lexer(">").nextToken())
-        assertEquals(Token(TokenType.GreaterThanOrEqualTo, ">=", 1, 1), Lexer(">=").nextToken())
-        assertEquals(Token(TokenType.EqualTo, "==", 1, 1), Lexer("==").nextToken())
-        assertEquals(Token(TokenType.Assign, "=", 1, 1), Lexer("=").nextToken())
+        assertEquals(Lexeme(Token.LessThan, Position(1, 1)), Lexer("<").nextLexeme())
+        assertEquals(Lexeme(Token.LessThanOrEqualTo, Position(1, 1)), Lexer("<=").nextLexeme())
+        assertEquals(Lexeme(Token.GreaterThan, Position(1, 1)), Lexer(">").nextLexeme())
+        assertEquals(Lexeme(Token.GreaterThanOrEqualTo, Position(1, 1)), Lexer(">=").nextLexeme())
+        assertEquals(Lexeme(Token.EqualTo, Position(1, 1)), Lexer("==").nextLexeme())
+        assertEquals(Lexeme(Token.Assign, Position(1, 1)), Lexer("=").nextLexeme())
 
-        assertEquals(Token(TokenType.LessThan, "<", 2, 1), Lexer("\n<").nextToken())
-        assertEquals(Token(TokenType.LessThan, "<", 1, 2), Lexer(" <").nextToken())
-        assertEquals(Token(TokenType.LessThanOrEqualTo, "<=", 3, 4), Lexer("  \n\n   <= \n  ").nextToken())
+        assertEquals(Lexeme(Token.LessThan, Position(1, 2)), Lexer(" <").nextLexeme())
     }
 
     @Test
     fun lex_parenthesis() {
-        assertEquals(Token(TokenType.LeftParenthesis, "(", 1, 1), Lexer("(").nextToken())
-        assertEquals(Token(TokenType.RightParenthesis, ")", 1, 1), Lexer(")").nextToken())
+        assertEquals(Lexeme(Token.LeftParenthesis, Position(1, 1)), Lexer("(").nextLexeme())
+        assertEquals(Lexeme(Token.RightParenthesis, Position(1, 1)), Lexer(")").nextLexeme())
 
-        assertEquals(Token(TokenType.LeftParenthesis, "(", 2, 1), Lexer("\n(").nextToken())
-        assertEquals(Token(TokenType.LeftParenthesis, "(", 1, 2), Lexer(" (").nextToken())
-        assertEquals(Token(TokenType.LeftParenthesis, "(", 3, 4), Lexer("  \n\n   ( \n  ").nextToken())
+        assertEquals(Lexeme(Token.LeftParenthesis, Position(1, 2)), Lexer(" (").nextLexeme())
     }
 
     @Test
     fun lex_identifier() {
-        assertEquals(Token(TokenType.Identifier, "abcd", 1, 1), Lexer("abcd").nextToken())
-        assertEquals(Token(TokenType.Identifier, "abcd34", 1, 1), Lexer("abcd34").nextToken())
-        assertEquals(Token(TokenType.Identifier, "a_bcd34", 1, 1), Lexer("a_bcd34").nextToken())
-        assertEquals(Token(TokenType.Identifier, "_bcd34", 1, 1), Lexer("_bcd34").nextToken())
+        assertEquals(Lexeme(Token.Identifier, Position(1, 1), "abcd"), Lexer("abcd").nextLexeme())
+        assertEquals(Lexeme(Token.Identifier, Position(1, 1), "abcd34"), Lexer("abcd34").nextLexeme())
+        assertEquals(Lexeme(Token.Identifier, Position(1, 1), "a_bcd34"), Lexer("a_bcd34").nextLexeme())
+        assertEquals(Lexeme(Token.Identifier, Position(1, 1), "_bcd34"), Lexer("_bcd34").nextLexeme())
 
-        assertEquals(Token(TokenType.Identifier, "_bcd34", 1, 3), Lexer("  _bcd34").nextToken())
-        assertEquals(Token(TokenType.Identifier, "_bcd34", 2, 2), Lexer(" \n _bcd34").nextToken())
+        assertEquals(Lexeme(Token.Identifier, Position(1, 3), "_bcd34"), Lexer("  _bcd34").nextLexeme())
     }
 
     @Test
     fun lex_number() {
-        assertEquals(Token(TokenType.Number, "1", 1, 1), Lexer("1").nextToken())
-        assertEquals(Token(TokenType.Number, "1234", 1, 1), Lexer("1234").nextToken())
-        assertEquals(Token(TokenType.Number, "12.3", 1, 1), Lexer("12.3").nextToken())
-        assertEquals(Token(TokenType.Number, ".123", 1, 1), Lexer(".123").nextToken())
-        assertEquals(Token(TokenType.Number, "0.123", 1, 1), Lexer("0.123").nextToken())
-        assertEquals(Token(TokenType.Number, "1.123e5", 1, 1), Lexer("1.123e5").nextToken())
-        assertEquals(Token(TokenType.Number, "2.123e7", 1, 1), Lexer("2.123E7").nextToken())
-        assertEquals(Token(TokenType.Number, "1.123e5", 1, 1), Lexer("1.123e+5").nextToken())
-        assertEquals(Token(TokenType.Number, "1.123e-5", 1, 1), Lexer("1.123e-5").nextToken())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "1"), Lexer("1").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "1234"), Lexer("1234").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "12.3"), Lexer("12.3").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), ".123"), Lexer(".123").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "0.123"), Lexer("0.123").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "1.123e5"), Lexer("1.123e5").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "2.123e7"), Lexer("2.123E7").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "1.123e5"), Lexer("1.123e+5").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "1.123e-5"), Lexer("1.123e-5").nextLexeme())
 
-        assertEquals(Token(TokenType.Number, "123", 1, 1), Lexer("123a").nextToken())
-        assertEquals(Token(TokenType.Number, "12", 1, 1), Lexer("12 3").nextToken())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "123"), Lexer("123a").nextLexeme())
+        assertEquals(Lexeme(Token.Number, Position(1, 1), "12"), Lexer("12 3").nextLexeme())
     }
 
     @Test
     fun lex_nothing() {
-        assertEquals(Token(TokenType.EndOfInput, "", -1, -1), Lexer("").nextToken())
-        assertEquals(Token(TokenType.EndOfInput, "", -1, -1), Lexer(" ").nextToken())
-        assertEquals(Token(TokenType.EndOfInput, "", -1, -1), Lexer("\n").nextToken())
-        assertEquals(Token(TokenType.EndOfInput, "", -1, -1), Lexer("  \n  \n   ").nextToken())
+        assertEquals(Lexeme(Token.EndOfInput, Position(1, 1)), Lexer("").nextLexeme())
+        assertEquals(Lexeme(Token.EndOfInput, Position(1, 2)), Lexer(" ").nextLexeme())
+        assertEquals(Lexeme(Token.NewLine, Position(1, 1)), Lexer("\n").nextLexeme())
+        assertEquals(Lexeme(Token.NewLine, Position(1, 3)), Lexer("  \n  \n   ").nextLexeme())
     }
 
     @Test
     fun lex_simple_sum() {
-        val results = Lexer("1 + 2 + 3").allTokens()
+        val results = Lexer("1 + 2 + 3").allLexemes()
         val expected = listOf(
-                Token(TokenType.Number, "1", 1, 1),
-                Token(TokenType.Plus, "+", 1, 3),
-                Token(TokenType.Number, "2", 1, 5),
-                Token(TokenType.Plus, "+", 1, 7),
-                Token(TokenType.Number, "3", 1, 9)
+                Lexeme(Token.Number, Position(1, 1), "1"),
+                Lexeme(Token.Plus, Position(1, 3)),
+                Lexeme(Token.Number, Position(1, 5), "2"),
+                Lexeme(Token.Plus, Position(1, 7)),
+                Lexeme(Token.Number, Position(1, 9), "3"),
+                Lexeme(Token.EndOfInput, Position(1, 10))
         )
         assertEquals(expected, results)
     }
 
     @Test
     fun lex_code() {
-        val results = Lexer("var a = 1 + 2 + 3\na/87*(12 -7)\nif ( a < 12 ) print a").allTokens()
+        val results = Lexer("var a = 1 + 2 + 3\na/87*(12 -7)\nif ( a < 12 ) print a").allLexemes()
         val expected = listOf(
-                Token(TokenType.Identifier, "var",      1, 1),
-                Token(TokenType.Identifier, "a",        1, 5),
-                Token(TokenType.Assign, "=",            1, 7),
-                Token(TokenType.Number, "1",            1, 9),
-                Token(TokenType.Plus, "+",              1, 11),
-                Token(TokenType.Number, "2",            1, 13),
-                Token(TokenType.Plus, "+",              1, 15),
-                Token(TokenType.Number, "3",            1, 17),
-                Token(TokenType.Identifier, "a",        2, 1),
-                Token(TokenType.Divide, "/",            2, 2),
-                Token(TokenType.Number, "87",           2, 3),
-                Token(TokenType.Times, "*",             2, 5),
-                Token(TokenType.LeftParenthesis, "(",   2, 6),
-                Token(TokenType.Number, "12",           2, 7),
-                Token(TokenType.Minus, "-",             2, 10),
-                Token(TokenType.Number, "7",            2, 11),
-                Token(TokenType.RightParenthesis, ")",  2, 12),
-                Token(TokenType.Identifier, "if",       3, 1),
-                Token(TokenType.LeftParenthesis, "(",   3, 4),
-                Token(TokenType.Identifier, "a",        3, 6),
-                Token(TokenType.LessThan, "<",          3, 8),
-                Token(TokenType.Number, "12",           3, 10),
-                Token(TokenType.RightParenthesis, ")",  3, 13),
-                Token(TokenType.Identifier, "print",    3, 15),
-                Token(TokenType.Identifier, "a",        3, 21)
+                Lexeme(Token.Identifier, Position(1, 1), "var"),
+                Lexeme(Token.Identifier, Position(1, 5), "a"),
+                Lexeme(Token.Assign, Position(1, 7)),
+                Lexeme(Token.Number, Position(1, 9), "1"),
+                Lexeme(Token.Plus, Position(1, 11)),
+                Lexeme(Token.Number,  Position(1, 13), "2"),
+                Lexeme(Token.Plus, Position(1, 15)),
+                Lexeme(Token.Number, Position(1, 17), "3"),
+                Lexeme(Token.NewLine, Position(1, 18)),
+                Lexeme(Token.Identifier, Position(2, 1), "a"),
+                Lexeme(Token.Divide, Position(2, 2)),
+                Lexeme(Token.Number, Position(2, 3), "87"),
+                Lexeme(Token.Times, Position(2, 5)),
+                Lexeme(Token.LeftParenthesis, Position(2, 6)),
+                Lexeme(Token.Number, Position(2, 7), "12"),
+                Lexeme(Token.Minus, Position(2, 10)),
+                Lexeme(Token.Number, Position(2, 11), "7"),
+                Lexeme(Token.RightParenthesis,  Position(2, 12)),
+                Lexeme(Token.NewLine, Position(2, 13)),
+                Lexeme(Token.Identifier, Position(3, 1), "if"),
+                Lexeme(Token.LeftParenthesis,  Position(3, 4)),
+                Lexeme(Token.Identifier, Position(3, 6), "a"),
+                Lexeme(Token.LessThan, Position(3, 8)),
+                Lexeme(Token.Number, Position(3, 10), "12"),
+                Lexeme(Token.RightParenthesis, Position(3, 13)),
+                Lexeme(Token.Identifier, Position(3, 15), "print"),
+                Lexeme(Token.Identifier, Position(3, 21), "a"),
+                Lexeme(Token.EndOfInput, Position(3, 22))
         )
         assertEquals(expected, results)
     }
