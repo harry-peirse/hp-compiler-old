@@ -2,11 +2,11 @@ package hp.compiler.ast
 
 import hp.compiler.*
 
-class ExpressionParser(val expression: ScopedExpression) {
+class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
 
     val finished get() = fsm.finished
-    var value: Expression? = null
-    var operator: Operator? = null
+    var arithmetic: Arithmetic? = null
+    var operator: ArithmeticOperator? = null
 
     fun input(lexeme: Lexeme) {
         if (!finished) {
@@ -14,7 +14,7 @@ class ExpressionParser(val expression: ScopedExpression) {
         }
     }
 
-    private var child: ExpressionParser? = null
+    private var child: ArithemeticParser? = null
 
     private enum class State {
         Start,
@@ -38,21 +38,21 @@ class ExpressionParser(val expression: ScopedExpression) {
 
     private fun handleStart(lexeme: Lexeme): State = when (lexeme.token) {
         Token.Number, Token.Identifier -> {
-            value = Value(lexeme)
-            expression.child = value
+            arithmetic = ArithmeticValue(lexeme)
+            arithmeticExpression.child = arithmetic
             State.Value
         }
         Token.Plus, Token.Minus -> {
-            val unary = UnaryOperator(lexeme)
-            expression.child = unary
+            val unary = UnaryArithmeticOperator(lexeme)
+            arithmeticExpression.child = unary
             operator = unary
             State.Unary
         }
         Token.LeftParenthesis -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            expression.child = childExpression
-            value = childExpression
+            val childExpression = ScopedArithmeticExpression(lexeme)
+            child = ArithemeticParser(childExpression)
+            arithmeticExpression.child = childExpression
+            arithmetic = childExpression
             State.Defer
         }
         else -> throw CompilationException("Unexpected character", lexeme)
@@ -66,21 +66,21 @@ class ExpressionParser(val expression: ScopedExpression) {
 
     private fun handleOperator(lexeme: Lexeme): State = when (lexeme.token) {
         Token.Number, Token.Identifier -> {
-            value = Value(lexeme)
-            (operator as BinaryOperator).right = value
+            arithmetic = ArithmeticValue(lexeme)
+            (operator as BinaryArithmeticOperator).right = arithmetic
             State.Value
         }
         Token.Plus, Token.Minus -> {
-            val unary = UnaryOperator(lexeme)
-            (operator as BinaryOperator).right = unary
+            val unary = UnaryArithmeticOperator(lexeme)
+            (operator as BinaryArithmeticOperator).right = unary
             operator = unary
             State.Unary
         }
         Token.LeftParenthesis -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            (operator as BinaryOperator).right = childExpression
-            value = childExpression
+            val childExpression = ScopedArithmeticExpression(lexeme)
+            child = ArithemeticParser(childExpression)
+            (operator as BinaryArithmeticOperator).right = childExpression
+            arithmetic = childExpression
             State.Defer
         }
         else -> throw CompilationException("Unexpected character", lexeme)
@@ -88,15 +88,15 @@ class ExpressionParser(val expression: ScopedExpression) {
 
     private fun handleUnary(lexeme: Lexeme): State = when (lexeme.token) {
         Token.Number, Token.Identifier -> {
-            value = Value(lexeme)
-            (operator as UnaryOperator).child = value
+            arithmetic = ArithmeticValue(lexeme)
+            (operator as UnaryArithmeticOperator).child = arithmetic
             State.Value
         }
         Token.LeftParenthesis -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            (operator as UnaryOperator).child = childExpression
-            value = childExpression
+            val childExpression = ScopedArithmeticExpression(lexeme)
+            child = ArithemeticParser(childExpression)
+            (operator as UnaryArithmeticOperator).child = childExpression
+            arithmetic = childExpression
             State.Defer
         }
         else -> throw CompilationException("Unexpected character", lexeme)
@@ -115,21 +115,21 @@ class ExpressionParser(val expression: ScopedExpression) {
     }
 
     private fun processOperator(lexeme: Lexeme): State {
-        val ancestor = expression.child
-        if (ancestor is BinaryOperator && !ancestor.lexeme.token.highPriority && lexeme.token.highPriority) {
-            val binary = BinaryOperator(lexeme, left = ancestor.right)
+        val ancestor = arithmeticExpression.child
+        if (ancestor is BinaryArithmeticOperator && !ancestor.lexeme.token.highPriority && lexeme.token.highPriority) {
+            val binary = BinaryArithmeticOperator(lexeme, left = ancestor.right)
             ancestor.right = binary
             operator = binary
         } else {
-            val binary = BinaryOperator(lexeme, left = expression.child)
-            expression.child = binary
+            val binary = BinaryArithmeticOperator(lexeme, left = arithmeticExpression.child)
+            arithmeticExpression.child = binary
             operator = binary
         }
         return State.Operator
     }
 
     private fun processEnd(lexeme: Lexeme): State {
-        expression.endLexeme = lexeme
+        arithmeticExpression.end = lexeme
         return State.End
     }
 }
