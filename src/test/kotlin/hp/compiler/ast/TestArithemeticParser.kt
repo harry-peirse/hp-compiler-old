@@ -165,4 +165,26 @@ class TestArithemeticParser {
 
         assertEquals(expected, parser.arithmeticExpression)
     }
+
+    @Test
+    fun `2 * (1 + 2)`() {
+        val lexer = Lexer(" 2 * (1 + 2) ")
+        val lexemes = lexer.allLexemes()
+        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
+
+        val expected = ScopedArithmeticExpression(lexemes[0], lexemes[8],
+                BinaryArithmeticOperator(lexemes[2],
+                        ArithmeticValue(lexemes[1]),
+                        ScopedArithmeticExpression(lexemes[3], lexemes[7],
+                                BinaryArithmeticOperator(lexemes[5],
+                                        ArithmeticValue(lexemes[4]),
+                                        ArithmeticValue(lexemes[6])
+                                )
+                        )
+                )
+        )
+
+        assertEquals(expected, parser.arithmeticExpression)
+    }
 }

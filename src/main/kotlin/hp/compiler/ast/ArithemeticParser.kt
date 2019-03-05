@@ -5,8 +5,6 @@ import hp.compiler.*
 class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
 
     val finished get() = fsm.finished
-    var arithmetic: Arithmetic? = null
-    var operator: ArithmeticOperator? = null
 
     fun input(lexeme: Lexeme) {
         if (!finished) {
@@ -15,6 +13,8 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
     }
 
     private var child: ArithemeticParser? = null
+    private var arithmetic: Arithmetic? = null
+    private var operator: ArithmeticOperator? = null
 
     private enum class State {
         Start,
