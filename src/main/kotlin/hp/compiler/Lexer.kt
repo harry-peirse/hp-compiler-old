@@ -22,63 +22,57 @@ class FSM<S : State, T>(val initialState: S, val exitState: S, val accumulator: 
 
 class Lexer(val input: String) {
 
-    companion object {
-        private val operatorRegex = Regex("[+|=|\\-|<|>|*|/]")
-        fun Char.isOperator() = operatorRegex.matches(this.toString())
-
-        private val parenthesisRegex = Regex("[(|)]")
-        fun Char.isParenthesis() = parenthesisRegex.matches(this.toString())
-
-        private val comparisonOperatorRegex = Regex("[<|>|=]")
-        fun Char.isComparisonOperator() = comparisonOperatorRegex.matches(this.toString())
-
-        private val arithmeticOperatorRegex = Regex("[+|\\-|/|*]")
-        fun Char.isArithmeticOperator() = arithmeticOperatorRegex.matches(this.toString())
-    }
-
-    var position = 0
+    var pos = 0
     var row = 1
     var col = 1
     var sentStartLexeme = false
 
     fun nextLexeme(): Lexeme {
 
-        if(!sentStartLexeme) {
+        if (!sentStartLexeme) {
             sentStartLexeme = true
             return Lexeme(Token.StartOfInput, Position(0, 0))
         }
 
         skipWhitespaces()
-        if (position >= input.length) {
+        if (pos >= input.length) {
             return Lexeme(Token.EndOfInput, Position(row, col))
         }
 
-        val character = input[position]
+        val character = input[pos]
 
         if (character == '\n') {
             val token = Lexeme(Token.NewLine, Position(row, col))
-            position++
+            pos++
             row++
             col = 1
             return token
         }
 
-        if (character.isLetter() || character == '_') {
-            return recognizeIdentifier()
-        }
+        val position = Position(row, col)
 
-        if (character.isDigit() || character == '.') {
-            return recognizeNumber()
-        }
+        val token = Token.values()
+                .filter { it.symbol != null }
+                .sortedByDescending { it.symbol!!.length }
+                .firstOrNull { input.startsWith(it.symbol!!, pos) }
 
-        if (character.isOperator()) {
-            return recognizeOperator()
-        }
+        val length = token?.symbol?.length ?: 0
 
-        if (character.isParenthesis()) {
-            return recognizeParenthesis()
-        }
+        if (token != null && ((!token.isKeyword || input.length < pos + length) ||
+                        (token.isKeyword && input.length >= pos + length && !input[pos + length].isLetterOrDigit()))) {
+            pos += length
+            col += length
+            return Lexeme(token, position)
+        } else {
 
+            if (character.isLetter() || character == '_') {
+                return recognizeIdentifier()
+            }
+
+            if (character.isDigit() || character == '.') {
+                return recognizeNumber()
+            }
+        }
         throw CompilationException("Unexpected character '$character'", Position(row, col))
     }
 
@@ -95,20 +89,20 @@ class Lexer(val input: String) {
     }
 
     private fun skipWhitespaces() {
-        if (position < input.length) {
-            var character = input[position]
-            while (position < input.length && character.isWhitespace() && character != '\n') {
-                position++
+        if (pos < input.length) {
+            var character = input[pos]
+            while (pos < input.length && character.isWhitespace() && character != '\n') {
+                pos++
                 col++
 
-                if (position < input.length) character = input[position]
+                if (pos < input.length) character = input[pos]
             }
         }
     }
 
     private fun recognizeIdentifier(): Lexeme {
         var identifier = ""
-        var pos = position
+        var pos = pos
         while (pos < input.length) {
             val character = input[pos]
 
@@ -121,7 +115,7 @@ class Lexer(val input: String) {
         }
 
         val token = Lexeme(Token.Identifier, Position(row, col), identifier)
-        position += identifier.length
+        this.pos += identifier.length
         this.col += identifier.length
 
         return token
@@ -132,8 +126,8 @@ class Lexer(val input: String) {
         val fsm = buildNumberRecognizer()
 
         // The input to the FSM will be all the characters from
-        // the current position to the rest of the lexer's input.
-        val fsmInput = input.substring(position)
+        // the current pos to the rest of the lexer's input.
+        val fsmInput = input.substring(pos)
 
         // Here, in addition of the FSM returning whether a number
         // has been recognized or not, it also returns the number
@@ -142,11 +136,11 @@ class Lexer(val input: String) {
         val result = fsm.run(fsmInput.toList())
 
         if (result.isNotEmpty()) {
-            val token = Lexeme(Token.Number, Position(row, col),
+            val token = Lexeme(Token.Float, Position(row, col),
                     result.joinToString("")
                             .toLowerCase()
                             .replace("+", ""))
-            position += result.size
+            pos += result.size
             col += result.size
 
             return token
@@ -174,7 +168,7 @@ class Lexer(val input: String) {
                 when {
                     it.isDigit() -> NumberRecogniserState.Integer
                     it == '.' -> NumberRecogniserState.BeginNumberWithFractionalPart
-                    else -> throw IllegalStateException("Unexpected compiler error when inspecting number at row $row and col $col")
+                    else -> throw IllegalStateException()
                 }
             NumberRecogniserState.Integer ->
                 when {
@@ -185,7 +179,7 @@ class Lexer(val input: String) {
                 }
             NumberRecogniserState.BeginNumberWithFractionalPart ->
                 if (it.isDigit()) NumberRecogniserState.NumberWithFractionalPart
-                else throw IllegalStateException("Unexpected compiler error when inspecting number at row $row and col $col")
+                else throw IllegalStateException()
             NumberRecogniserState.NumberWithFractionalPart ->
                 when {
                     it.isDigit() -> NumberRecogniserState.NumberWithFractionalPart
@@ -196,91 +190,15 @@ class Lexer(val input: String) {
                 when {
                     it == '+' || it == '-' -> NumberRecogniserState.BeginNumberWithSignedExponent
                     it.isDigit() -> NumberRecogniserState.NumberWithExponent
-                    else -> throw IllegalStateException("Unexpected compiler error when inspecting number at row $row and col $col")
+                    else -> throw IllegalStateException()
                 }
             NumberRecogniserState.BeginNumberWithSignedExponent ->
                 if (it.isDigit()) NumberRecogniserState.NumberWithExponent
-                else throw IllegalStateException("Unexpected compiler error when inspecting number at row $row and col $col")
+                else throw IllegalStateException()
             NumberRecogniserState.NumberWithExponent ->
                 if (it.isDigit()) NumberRecogniserState.NumberWithExponent
                 else NumberRecogniserState.NoNextState
-            NumberRecogniserState.NoNextState -> throw IllegalStateException("Unexpected compiler error when inspecting number at row $row and col $col")
+            else -> throw IllegalStateException()
         }
-    }
-
-    private fun recognizeOperator(): Lexeme {
-        val character = input[position]
-        return when {
-            character.isComparisonOperator() -> recognizeComparisonOperator()
-            character.isArithmeticOperator() -> recognizeArithmeticOperator()
-            else -> throw IllegalStateException("Unexpected compiler error when inspecting '$character' at row $row and col $col")
-        }
-    }
-
-    private fun recognizeComparisonOperator(): Lexeme {
-        val character = input[position]
-
-        // 'lookahead' is the next character in the input
-        // or 'null' if 'character' was the last character.
-        val lookahead = if (position + 1 < input.length) input[position + 1] else null
-
-        // Whether the 'lookahead' character is the equal symbol '='.
-        val isLookaheadEqualSymbol = lookahead !== null && lookahead == '='
-
-        val token = when (character) {
-            '>' ->
-                if (isLookaheadEqualSymbol) Lexeme(Token.GreaterThanOrEqualTo, Position(row, col))
-                else Lexeme(Token.GreaterThan, Position(row, col))
-            '<' ->
-                if (isLookaheadEqualSymbol) Lexeme(Token.LessThanOrEqualTo, Position(row, col))
-                else Lexeme(Token.LessThan, Position(row, col))
-            '=' ->
-                if (isLookaheadEqualSymbol) Lexeme(Token.EqualTo, Position(row, col))
-                else Lexeme(Token.Assign,  Position(row, col))
-            else ->
-                throw IllegalStateException("Unexpected compiler error when inspecting '$character' at row $row and col $col")
-        }
-
-        position++
-        col++
-
-        if (isLookaheadEqualSymbol) {
-            position++
-            col++
-        }
-
-        return token
-    }
-
-    private fun recognizeArithmeticOperator(): Lexeme {
-        val character = input[position]
-
-        val token = when (character) {
-            '+' -> Lexeme(Token.Plus, Position(row, col))
-            '-' -> Lexeme(Token.Minus,  Position(row, col))
-            '*' -> Lexeme(Token.Times, Position(row, col))
-            '/' -> Lexeme(Token.Divide, Position(row, col))
-            else -> throw IllegalStateException("Unexpected compiler error when inspecting '$character' at row $row and col $col")
-        }
-
-        position++
-        col++
-
-        return token
-    }
-
-    fun recognizeParenthesis(): Lexeme {
-        val character = input[position]
-
-        val token = when (character) {
-            '(' -> Lexeme(Token.LeftParenthesis, Position(row, col))
-            ')' -> Lexeme(Token.RightParenthesis, Position(row, col))
-            else -> throw IllegalStateException("Unexpected compiler error when inspecting '$character' at row $row and col $col")
-        }
-
-        position++
-        col++
-
-        return token
     }
 }

@@ -4,12 +4,12 @@ import hp.compiler.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class TestArithemeticParser {
+class TestArithemeticExpressionParser {
     @Test
     fun `1 + 2`() {
         val lexer = Lexer(" 1 + 2 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[4],
@@ -26,7 +26,7 @@ class TestArithemeticParser {
     fun `1 + 2 * 3`() {
         val lexer = Lexer(" 1 + 2 * 3 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[6],
@@ -45,7 +45,7 @@ class TestArithemeticParser {
     fun `1 div 2 - 3`() {
         val lexer = Lexer(" 1 / 2 - 3 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[6],
@@ -64,7 +64,7 @@ class TestArithemeticParser {
     fun `123`() {
         val lexer = Lexer(" 123 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[2],
@@ -78,7 +78,7 @@ class TestArithemeticParser {
     fun `-b`() {
         val lexer = Lexer(" -b ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[3],
@@ -94,7 +94,7 @@ class TestArithemeticParser {
     fun `1 + 2 * -a - 4 div 5`() {
         val lexer = Lexer(" 1 + 2 * -a - 4 / 5 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[11],
@@ -122,7 +122,7 @@ class TestArithemeticParser {
     fun `(1 + 2) * 3`() {
         val lexer = Lexer(" (1 + 2) * 3 ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[8],
@@ -144,7 +144,7 @@ class TestArithemeticParser {
     fun `1 * -(-1 + 2)`() {
         val lexer = Lexer(" 1 * -(-1 + 2 ) ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[10],
@@ -170,7 +170,7 @@ class TestArithemeticParser {
     fun `2 * (1 + 2)`() {
         val lexer = Lexer(" 2 * (1 + 2) ")
         val lexemes = lexer.allLexemes()
-        val parser = ArithemeticParser(ScopedArithmeticExpression(lexemes[0]))
+        val parser = ArithemeticExpressionParser(ScopedArithmeticExpression(lexemes[0]))
         lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
 
         val expected = ScopedArithmeticExpression(lexemes[0], lexemes[8],

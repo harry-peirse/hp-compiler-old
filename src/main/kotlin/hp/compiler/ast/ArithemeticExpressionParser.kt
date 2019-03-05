@@ -2,7 +2,7 @@ package hp.compiler.ast
 
 import hp.compiler.*
 
-class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
+class ArithemeticExpressionParser(val arithmeticExpression: ScopedArithmeticExpression) {
 
     val finished get() = fsm.finished
 
@@ -12,7 +12,7 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
         }
     }
 
-    private var child: ArithemeticParser? = null
+    private var child: ArithemeticExpressionParser? = null
     private var arithmetic: Arithmetic? = null
     private var operator: ArithmeticOperator? = null
 
@@ -37,7 +37,7 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
     }
 
     private fun handleStart(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Number, Token.Identifier -> {
+        Token.Float, Token.Identifier -> {
             arithmetic = ArithmeticValue(lexeme)
             arithmeticExpression.child = arithmetic
             State.Value
@@ -50,7 +50,7 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedArithmeticExpression(lexeme)
-            child = ArithemeticParser(childExpression)
+            child = ArithemeticExpressionParser(childExpression)
             arithmeticExpression.child = childExpression
             arithmetic = childExpression
             State.Defer
@@ -65,7 +65,7 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
     }
 
     private fun handleOperator(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Number, Token.Identifier -> {
+        Token.Float, Token.Identifier -> {
             arithmetic = ArithmeticValue(lexeme)
             (operator as BinaryArithmeticOperator).right = arithmetic
             State.Value
@@ -78,7 +78,7 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedArithmeticExpression(lexeme)
-            child = ArithemeticParser(childExpression)
+            child = ArithemeticExpressionParser(childExpression)
             (operator as BinaryArithmeticOperator).right = childExpression
             arithmetic = childExpression
             State.Defer
@@ -87,14 +87,14 @@ class ArithemeticParser(val arithmeticExpression: ScopedArithmeticExpression) {
     }
 
     private fun handleUnary(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Number, Token.Identifier -> {
+        Token.Float, Token.Identifier -> {
             arithmetic = ArithmeticValue(lexeme)
             (operator as UnaryArithmeticOperator).child = arithmetic
             State.Value
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedArithmeticExpression(lexeme)
-            child = ArithemeticParser(childExpression)
+            child = ArithemeticExpressionParser(childExpression)
             (operator as UnaryArithmeticOperator).child = childExpression
             arithmetic = childExpression
             State.Defer
