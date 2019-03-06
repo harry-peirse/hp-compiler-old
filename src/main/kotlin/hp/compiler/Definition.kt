@@ -9,48 +9,58 @@ class CompilationException(message: String, position: Position?) : Exception("$p
 
 /** LEXICAL DEFINITIONS **/
 
-enum class Token(val symbol: kotlin.String? = null, val isKeyword: kotlin.Boolean = false, val highPriority: kotlin.Boolean = false) {
+enum class Token(val symbol: kotlin.String? = null,
+                 val isKeyword: kotlin.Boolean = false,
+                 val highPriority: kotlin.Boolean = false,
+                 val isBinaryOperator: kotlin.Boolean = false,
+                 val isPrefixOperator: kotlin.Boolean = false,
+                 val isPostfixOperator: kotlin.Boolean = false,
+                 val isValueType: kotlin.Boolean = false,
+                 val isAssignment: kotlin.Boolean = false,
+                 val isVariable: kotlin.Boolean = false) {
     // Literals
-    Byte,
-    Character,
-    Short,
-    Integer,
-    Long,
-    Float,
-    Double,
-    True("true", isKeyword = true),
-    False("false", isKeyword = true),
-    String,
+    Byte(isValueType = true),
+    Character(isValueType = true),
+    Short(isValueType = true),
+    Integer(isValueType = true),
+    Long(isValueType = true),
+    Float(isValueType = true),
+    Double(isValueType = true),
+    True("true", isKeyword = true, isValueType = true),
+    False("false", isKeyword = true, isValueType = true),
+    String(isValueType = true),
 
     // Identifiers
-    Identifier,
+    Identifier(isValueType = true, isVariable = true),
 
     // Arithmetic Operators
-    Plus("+"),
-    Minus("-"),
-    Times("*", highPriority = true),
-    Divide("/", highPriority = true),
+    Plus("+", isBinaryOperator = true, isPrefixOperator = true),
+    Minus("-", isBinaryOperator = true, isPrefixOperator = true),
+    Times("*", highPriority = true, isBinaryOperator = true),
+    Divide("/", highPriority = true, isBinaryOperator = true),
+    Increment("++", isPrefixOperator = true, isPostfixOperator = true),
+    Decrement("--", isPrefixOperator = true, isPostfixOperator = true),
 
     // Comparison Operators
-    GreaterThan(">"),
-    GreaterThanOrEqualTo(">="),
-    LessThan("<"),
-    LessThanOrEqualTo("<="),
-    EqualTo("=="),
-    NotEqualTo("!="),
+    GreaterThan(">", isBinaryOperator = true),
+    GreaterThanOrEqualTo(">=", isBinaryOperator = true),
+    LessThan("<", isBinaryOperator = true),
+    LessThanOrEqualTo("<=", isBinaryOperator = true),
+    EqualTo("==", isBinaryOperator = true),
+    NotEqualTo("!=", isBinaryOperator = true),
 
     // Logical Operators
-    And("&&"),
-    Or("||"),
-    XOr("|"),
-    Not("!"),
+    And("&&", isBinaryOperator = true),
+    Or("||", isBinaryOperator = true),
+    XOr("|", isBinaryOperator = true),
+    Not("!", isPrefixOperator = true),
 
     // Assignment Operators
-    Assign("="),
-    PlusAssign("+="),
-    MinusAssign("-="),
-    TimesAssign("*="),
-    DivideAssign("/="),
+    Assign("=", isAssignment = true),
+    PlusAssign("+=", isBinaryOperator = true, isAssignment = true),
+    MinusAssign("-=", isBinaryOperator = true, isAssignment = true),
+    TimesAssign("*=", isBinaryOperator = true, isAssignment = true),
+    DivideAssign("/=", isBinaryOperator = true, isAssignment = true),
 
     // Parenthesis
     LeftParenthesis("("),
@@ -82,45 +92,28 @@ interface AST {
 
 interface Expression : AST
 interface Operator : AST
-interface Unary<T : AST> : AST {
-    var child: T?
+interface Unary : Operator {
+    var child: AST?
 }
 
-interface Binary<T : AST, U : AST> : AST {
-    var left: T?
-    var right: T?
+interface Binary : Operator {
+    var left: AST?
+    var right: AST?
 }
 
-interface Scoped : AST {
+interface Scoped : Expression {
     var end: Lexeme?
 }
 
-interface Arithmetic : Expression
-interface ArithmeticOperator : Arithmetic, Operator
+data class ScopedExpression(override val lexeme: Lexeme,
+                            override var end: Lexeme? = null,
+                            override var child: AST? = null) : Unary, Scoped
 
-interface Logical : Expression
-interface LogicalOperator : Logical, Operator
+data class BinaryOperator(override val lexeme: Lexeme,
+                          override var left: AST? = null,
+                          override var right: AST? = null) : Binary
 
-data class ScopedArithmeticExpression(override val lexeme: Lexeme, override var end: Lexeme? = null, override var child: Arithmetic? = null) :
-        Unary<Arithmetic>, Arithmetic, Scoped
+data class PrefixOperator(override val lexeme: Lexeme,
+                          override var child: AST? = null) : Unary
 
-data class BinaryArithmeticOperator(override val lexeme: Lexeme, override var left: Arithmetic? = null, override var right: Arithmetic? = null) :
-        Binary<Arithmetic, Arithmetic>, ArithmeticOperator
-
-data class UnaryArithmeticOperator(override val lexeme: Lexeme, override var child: Arithmetic? = null) :
-        Unary<Arithmetic>, ArithmeticOperator
-
-data class ArithmeticValue(override val lexeme: Lexeme) :
-        Arithmetic
-
-data class ScopedLogicalExpression(override val lexeme: Lexeme, override var end: Lexeme? = null, override var child: Logical? = null) :
-        Unary<Logical>, Logical, Scoped
-
-data class BinaryLogicalOperator(override val lexeme: Lexeme, override var left: Logical? = null, override var right: Logical? = null) :
-        Binary<Logical, Logical>, LogicalOperator
-
-data class UnaryLogicalOperator(override val lexeme: Lexeme, override var child: Logical? = null) :
-        Unary<Logical>, LogicalOperator
-
-data class LogicalValue(override val lexeme: Lexeme) :
-        Logical
+data class Value(override val lexeme: Lexeme) : Expression
