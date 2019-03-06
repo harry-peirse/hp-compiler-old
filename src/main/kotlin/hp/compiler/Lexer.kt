@@ -57,14 +57,21 @@ class Lexer(val input: String) {
                 .firstOrNull { input.startsWith(it.symbol!!, pos) }
 
         val length = token?.symbol?.length ?: 0
+        val nextCharacter = if (input.length > pos + length + 1) input[pos + length] else null
 
-        if (token != null && ((!token.isKeyword || input.length < pos + length) ||
-                        (token.isKeyword && input.length >= pos + length && !input[pos + length].isLetterOrDigit()))) {
+        var keepProcessing = false
+        if (nextCharacter != null && token != null && ((
+                        token == Token.Dereference && nextCharacter.isDigit()) || (
+                        token.isKeyword && nextCharacter.isLetterOrDigit()))) {
+            // The point started a number, not a dereference
+            keepProcessing = true
+        }
+
+        if (token != null && !keepProcessing) {
             pos += length
             col += length
             return Lexeme(token, position)
         } else {
-
             if (character.isLetter() || character == '_') {
                 return recognizeIdentifier()
             }

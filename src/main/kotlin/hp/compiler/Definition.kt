@@ -71,6 +71,7 @@ enum class Token(val symbol: kotlin.String? = null,
     RightBrace("}"),
 
     // Special Tokens
+    Dereference("."),
     NewLine("\n"),
     StartOfInput,
     EndOfInput;
@@ -116,4 +117,8 @@ data class BinaryOperator(override val lexeme: Lexeme,
 data class PrefixOperator(override val lexeme: Lexeme,
                           override var child: AST? = null) : Unary
 
-data class Value(override val lexeme: Lexeme) : Expression
+data class PostfixOperator(override val lexeme: Lexeme,
+                          override var child: AST? = null) : Unary
+
+data class Literal(override val lexeme: Lexeme) : Expression
+data class Variable(override val lexeme: Lexeme) : Expression

@@ -17,9 +17,11 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
 
     private enum class State {
         Start,
-        Value,
+        Literal,
+        Variable,
         Operator,
-        Unary,
+        Prefix,
+        Postfix,
         Defer,
         End
     }
@@ -27,24 +29,30 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
     private val fsm = FSM<State, Lexeme>(State.Start, State.End) { state, lexeme ->
         when (state) {
             State.Start -> handleStart(lexeme)
-            State.Value -> handleValue(lexeme)
+            State.Literal -> handleLiteral(lexeme)
+            State.Variable -> handleVariable(lexeme)
             State.Operator -> handleOperator(lexeme)
-            State.Unary -> handleUnary(lexeme)
+            State.Prefix -> handlePrefix(lexeme)
+            State.Postfix -> handlePostfix(lexeme)
             State.Defer -> handleDefer(lexeme)
             State.End -> throw IllegalStateException()
         }
     }
 
     private fun handleStart(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Float, Token.Identifier -> {
-            scopedExpression.child = Value(lexeme)
-            State.Value
+        Token.Float -> {
+            scopedExpression.child = Literal(lexeme)
+            State.Literal
         }
-        Token.Plus, Token.Minus -> {
+        Token.Identifier -> {
+            scopedExpression.child = Variable(lexeme)
+            State.Variable
+        }
+        Token.Plus, Token.Minus, Token.Increment, Token.Decrement -> {
             val unary = PrefixOperator(lexeme)
             scopedExpression.child = unary
             currentOperator = unary
-            State.Unary
+            State.Prefix
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedExpression(lexeme)
@@ -55,22 +63,33 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
         else -> throw CompilationException("Unexpected character", lexeme)
     }
 
-    private fun handleValue(lexeme: Lexeme): State = when (lexeme.token) {
+    private fun handleLiteral(lexeme: Lexeme): State = when (lexeme.token) {
         Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
         Token.RightParenthesis, Token.EndOfInput -> processEnd(lexeme)
         else -> throw CompilationException("Unexpected character", lexeme)
     }
 
+    private fun handleVariable(lexeme: Lexeme): State = when (lexeme.token) {
+        Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
+        Token.Increment, Token.Decrement -> processPostfix(lexeme)
+        Token.RightParenthesis, Token.EndOfInput -> processEnd(lexeme)
+        else -> throw CompilationException("Unexpected character", lexeme)
+    }
+
     private fun handleOperator(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Float, Token.Identifier -> {
-            (currentOperator as BinaryOperator).right = Value(lexeme)
-            State.Value
+        Token.Float -> {
+            (currentOperator as BinaryOperator).right = Literal(lexeme)
+            State.Literal
         }
-        Token.Plus, Token.Minus -> {
+        Token.Identifier -> {
+            (currentOperator as BinaryOperator).right = Variable(lexeme)
+            State.Variable
+        }
+        Token.Plus, Token.Minus, Token.Increment, Token.Decrement -> {
             val unary = PrefixOperator(lexeme)
             (currentOperator as BinaryOperator).right = unary
             currentOperator = unary
-            State.Unary
+            State.Prefix
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedExpression(lexeme)
@@ -81,10 +100,17 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
         else -> throw CompilationException("Unexpected character", lexeme)
     }
 
-    private fun handleUnary(lexeme: Lexeme): State = when (lexeme.token) {
-        Token.Float, Token.Identifier -> {
-            (currentOperator as PrefixOperator).child = Value(lexeme)
-            State.Value
+    private fun handlePrefix(lexeme: Lexeme): State = when (lexeme.token) {
+        Token.Float -> {
+            if((currentOperator as PrefixOperator).lexeme.token == Token.Increment || (currentOperator as PrefixOperator).lexeme.token == Token.Decrement) {
+                throw CompilationException("Illegal operator", lexeme)
+            }
+            (currentOperator as PrefixOperator).child = Literal(lexeme)
+            State.Literal
+        }
+        Token.Identifier -> {
+            (currentOperator as PrefixOperator).child = Variable(lexeme)
+            State.Variable
         }
         Token.LeftParenthesis -> {
             val childExpression = ScopedExpression(lexeme)
@@ -95,6 +121,12 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
         else -> throw CompilationException("Unexpected character", lexeme)
     }
 
+    private fun handlePostfix(lexeme: Lexeme): State = when (lexeme.token) {
+        Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
+        Token.RightParenthesis, Token.EndOfInput -> processEnd(lexeme)
+        else -> throw CompilationException("Unexpected character", lexeme)
+    }
+
     private fun handleDefer(lexeme: Lexeme): State {
         val child = child
         return if (child != null && !child.finished) {
@@ -102,6 +134,7 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
             State.Defer
         } else when (lexeme.token) {
             Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
+            Token.Increment, Token.Decrement -> processPostfix(lexeme)
             Token.RightParenthesis, Token.EndOfInput -> processEnd(lexeme)
             else -> throw CompilationException("Unexpected character", lexeme)
         }
@@ -119,6 +152,30 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
             currentOperator = binary
         }
         return State.Operator
+    }
+
+    private fun processPostfix(lexeme: Lexeme): State {
+        val unary = PostfixOperator(lexeme)
+        when (currentOperator) {
+            is BinaryOperator -> {
+                unary.child = (currentOperator as BinaryOperator).right
+                (currentOperator as BinaryOperator).right = unary
+            }
+            is PrefixOperator -> {
+                if ((currentOperator as PrefixOperator).lexeme.token == Token.Minus ||
+                        (currentOperator as PrefixOperator).lexeme.token == Token.Plus) {
+                    unary.child = (currentOperator as PrefixOperator).child
+                    (currentOperator as PrefixOperator).child = unary
+                } else {
+                    throw CompilationException("Illegal operator", lexeme)
+                }
+            }
+            else -> {
+                unary.child = scopedExpression.child
+                scopedExpression.child = unary
+            }
+        }
+        return State.Postfix
     }
 
     private fun processEnd(lexeme: Lexeme): State {
