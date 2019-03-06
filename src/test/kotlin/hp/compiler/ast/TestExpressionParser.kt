@@ -19,7 +19,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -38,7 +38,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -57,7 +57,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -71,7 +71,7 @@ class TestExpressionParser {
                 Literal(lexemes[1])
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -87,7 +87,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -115,7 +115,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -137,7 +137,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -163,7 +163,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -185,7 +185,7 @@ class TestExpressionParser {
                 )
         )
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -199,7 +199,7 @@ class TestExpressionParser {
                 PostfixOperator(lexemes[2],
                         Variable(lexemes[1])))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -213,7 +213,7 @@ class TestExpressionParser {
                 PrefixOperator(lexemes[1],
                         Variable(lexemes[2])))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -229,7 +229,7 @@ class TestExpressionParser {
                         PostfixOperator(lexemes[3],
                                 Variable(lexemes[2]))))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -246,7 +246,7 @@ class TestExpressionParser {
                         PostfixOperator(lexemes[4],
                                 Variable(lexemes[3]))))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -265,7 +265,7 @@ class TestExpressionParser {
                                         Variable(lexemes[3])),
                                 Literal(lexemes[6]))))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -283,7 +283,7 @@ class TestExpressionParser {
                                 Literal(lexemes[3])),
                         Literal(lexemes[5])))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -300,7 +300,7 @@ class TestExpressionParser {
                         ScopedExpression(lexemes[3], lexemes[5],
                                 Literal(lexemes[4]))))
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 
     @Test
@@ -324,6 +324,6 @@ class TestExpressionParser {
                                                 Variable(lexemes[10]))))))
         expected.linkHierarchy()
 
-        assertEquals(expected, parser.scopedExpression)
+        assertEquals(expected, parser.ast)
     }
 }

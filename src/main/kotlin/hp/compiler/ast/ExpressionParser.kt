@@ -2,11 +2,11 @@ package hp.compiler.ast
 
 import hp.compiler.*
 
-class ExpressionParser(val scopedExpression: ScopedExpression) {
+class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpression> {
 
     val finished get() = fsm.finished
 
-    fun input(lexeme: Lexeme) {
+    override fun input(lexeme: Lexeme) {
         if (!finished) {
             fsm.input(lexeme)
         }
@@ -46,27 +46,27 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
 
     private fun handleStart(lexeme: Lexeme): State = when {
         lexeme.token.isLiteral -> {
-            scopedExpression.expression = Literal(lexeme)
+            ast.expression = Literal(lexeme)
             State.Literal
         }
         lexeme.token.isVariable -> {
-            scopedExpression.expression = Variable(lexeme)
+            ast.expression = Variable(lexeme)
             State.Variable
         }
         lexeme.token.isPrefixOperator -> {
             val unary = PrefixOperator(lexeme)
-            scopedExpression.expression = unary
+            ast.expression = unary
             currentOperator = unary
             State.Prefix
         }
         lexeme.token == Token.LeftParenthesis -> {
             val childExpression = ScopedExpression(lexeme)
             child = ExpressionParser(childExpression)
-            scopedExpression.expression = childExpression
+            ast.expression = childExpression
             State.Defer
         }
         lexeme.token == Token.Var -> {
-            scopedExpression.expression = Declaration(lexeme)
+            ast.expression = Declaration(lexeme)
             State.Declaration
         }
         else -> throw CompilationException("Unexpected token", lexeme)
@@ -87,7 +87,7 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
 
     private fun handleDeclaration(lexeme: Lexeme): State = when {
         lexeme.token.isVariable -> {
-            (scopedExpression.expression as Declaration).variable = Variable(lexeme)
+            (ast.expression as Declaration).variable = Variable(lexeme)
             State.Assignment
         }
         else -> throw CompilationException("Unexpected token", lexeme)
@@ -97,7 +97,7 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
         lexeme.token.isAssignment -> {
             val childExpression = ScopedExpression(lexeme)
             child = ExpressionParser(childExpression)
-            (scopedExpression.expression as Declaration).expression = childExpression
+            (ast.expression as Declaration).expression = childExpression
             State.Defer
         }
         else -> throw CompilationException("Unexpected token", lexeme)
@@ -124,6 +124,7 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
             (currentOperator as BinaryOperator).right = childExpression
             State.Defer
         }
+        lexeme.token == Token.NewLine -> State.Operator
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
@@ -145,6 +146,7 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
             (currentOperator as PrefixOperator).child = childExpression
             State.Defer
         }
+        lexeme.token == Token.NewLine -> State.Operator
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
@@ -172,14 +174,14 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
     }
 
     private fun processOperator(lexeme: Lexeme): State {
-        val ancestor = scopedExpression.expression
+        val ancestor = ast.expression
         if (ancestor is BinaryOperator && !ancestor.lexeme.token.highPriority && lexeme.token.highPriority) {
             val binary = BinaryOperator(lexeme, left = ancestor.right)
             ancestor.right = binary
             currentOperator = binary
         } else {
-            val binary = BinaryOperator(lexeme, left = scopedExpression.expression)
-            scopedExpression.expression = binary
+            val binary = BinaryOperator(lexeme, left = ast.expression)
+            ast.expression = binary
             currentOperator = binary
         }
         return State.Operator
@@ -202,16 +204,16 @@ class ExpressionParser(val scopedExpression: ScopedExpression) {
                 }
             }
             else -> {
-                unary.child = scopedExpression.expression
-                scopedExpression.expression = unary
+                unary.child = ast.expression
+                ast.expression = unary
             }
         }
         return State.Postfix
     }
 
     private fun processEnd(lexeme: Lexeme): State {
-        scopedExpression.end = lexeme
-        scopedExpression.linkHierarchy()
+        ast.end = lexeme
+        ast.linkHierarchy()
         return State.End
     }
 }

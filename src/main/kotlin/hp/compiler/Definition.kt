@@ -82,15 +82,20 @@ enum class Token(val symbol: kotlin.String? = null,
     EndOfInput;
 }
 
-data class Position(val row: Int = -1, val col: Int = -1, val sourceFile: String = "_") {
-    override fun toString() = "Position(${row.toString().padStart(2)}, ${col.toString().padStart(2)} of $sourceFile)"
+data class Position(val row: Int = -1, val col: Int = -1, val sourceFile: String = "") {
+    override fun toString() = "$sourceFile@${row.toString().padStart(3, '0')},${col.toString().padStart(3, '0')}"
 }
 
 data class Lexeme(val token: Token, val position: Position? = null, val value: String? = null) {
-    override fun toString() = "Lexeme(${token.toString().padEnd(16)} at $position ${(value ?: "").padStart(10)})"
+    override fun toString() = "$position ${token.toString().padEnd(16)} ${(value ?: "").padStart(5)}"
 }
 
 /** ABSTRACT SYNTAX TREE DEFINITIONS **/
+
+interface Parser<T: AST> {
+    val ast: T
+    fun input(lexeme: Lexeme)
+}
 
 sealed class AST {
     var parent: AST? = null
@@ -155,6 +160,19 @@ data class Declaration(val lexeme: Lexeme,
     }
 
     override fun toString(): String = "\n${depthString}Declaration     (lexeme=$lexeme, variable=$variable, expression=$expression)"
+}
+
+data class Assignment(val lexeme: Lexeme,
+                      var variable: AST? = null,
+                      var expression: AST? = null) : AST() {
+    override fun linkHierarchy() {
+        variable?.parent = this
+        variable?.linkHierarchy()
+        expression?.parent = this
+        expression?.linkHierarchy()
+    }
+
+    override fun toString(): String = "\n${depthString}Assignment      (lexeme=$lexeme, variable=$variable, expression=$expression)"
 }
 
 data class PostfixOperator(val lexeme: Lexeme,
