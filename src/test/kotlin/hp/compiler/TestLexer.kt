@@ -84,7 +84,7 @@ class TestLexer {
         val results = Lexer("var a = 1 + 2 + 3\na/87*(12 -7)\nif ( a < 12 ) print a").allLexemes()
         val expected = listOf(
                 Lexeme(Token.StartOfInput, Position(0, 0)),
-                Lexeme(Token.Identifier, Position(1, 1), "var"),
+                Lexeme(Token.Var, Position(1, 1)),
                 Lexeme(Token.Identifier, Position(1, 5), "a"),
                 Lexeme(Token.Assign, Position(1, 7)),
                 Lexeme(Token.Float, Position(1, 9), "1"),

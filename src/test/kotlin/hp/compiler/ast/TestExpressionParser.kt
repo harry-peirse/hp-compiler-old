@@ -285,4 +285,45 @@ class TestExpressionParser {
 
         assertEquals(expected, parser.scopedExpression)
     }
+
+    @Test
+    fun `var a = 123`() {
+        val lexer = Lexer(" var a = 123 ")
+        val lexemes = lexer.allLexemes()
+
+        val parser = ExpressionParser(ScopedExpression(lexemes[0]))
+        lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
+
+        val expected = ScopedExpression(lexemes[0], lexemes[5],
+                Declaration(lexemes[1],
+                        Variable(lexemes[2]),
+                        ScopedExpression(lexemes[3], lexemes[5],
+                                Literal(lexemes[4]))))
+
+        assertEquals(expected, parser.scopedExpression)
+    }
+
+    @Test
+    fun `var a = (1 + b) * c--`() {
+        val lexer = Lexer(" var a = (1+b) * c--")
+        val lexemes = lexer.allLexemes()
+
+        val parser = ExpressionParser(ScopedExpression(lexemes[0]))
+        lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
+
+        val expected = ScopedExpression(lexemes[0], lexemes[12],
+                Declaration(lexemes[1],
+                        Variable(lexemes[2]),
+                        ScopedExpression(lexemes[3], lexemes[12],
+                                BinaryOperator(lexemes[9],
+                                        ScopedExpression(lexemes[4], lexemes[8],
+                                                BinaryOperator(lexemes[6],
+                                                        Literal(lexemes[5]),
+                                                        Variable(lexemes[7]))),
+                                        PostfixOperator(lexemes[11],
+                                                Variable(lexemes[10]))))))
+        expected.linkHierarchy()
+
+        assertEquals(expected, parser.scopedExpression)
+    }
 }
