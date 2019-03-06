@@ -267,4 +267,22 @@ class TestExpressionParser {
 
         assertEquals(expected, parser.scopedExpression)
     }
+
+    @Test
+    fun `1 lessThan 2 lessThan 3`() {
+        val lexer = Lexer(" 1 < 2 < 3 ")
+        val lexemes = lexer.allLexemes()
+
+        val parser = ExpressionParser(ScopedExpression(lexemes[0]))
+        lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
+
+        val expected = ScopedExpression(lexemes[0], lexemes[6],
+                BinaryOperator(lexemes[4],
+                        BinaryOperator(lexemes[2],
+                                Literal(lexemes[1]),
+                                Literal(lexemes[3])),
+                        Literal(lexemes[5])))
+
+        assertEquals(expected, parser.scopedExpression)
+    }
 }
