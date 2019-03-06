@@ -81,7 +81,7 @@ class TestLexer {
 
     @Test
     fun lex_code() {
-        val results = Lexer("var a  1 + 2 + 3\na/87*(12 -7)\nif ( a < 12 ) print a").allLexemes()
+        val results = Lexer("var a = 1 + 2 + 3\na/87*(12 -7)\nif ( a < 12 ) print a").allLexemes()
         val expected = listOf(
                 Lexeme(Token.StartOfInput, Position(0, 0)),
                 Lexeme(Token.Var, Position(1, 1)),
