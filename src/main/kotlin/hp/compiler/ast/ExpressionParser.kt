@@ -2,7 +2,7 @@ package hp.compiler.ast
 
 import hp.compiler.*
 
-class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpression> {
+class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpression> {
 
     val finished get() = fsm.finished
 
@@ -19,8 +19,6 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
         Start,
         Literal,
         Variable,
-        Declaration,
-        Assignment,
         Operator,
         Prefix,
         Postfix,
@@ -34,8 +32,6 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
             State.Start -> handleStart(lexeme)
             State.Literal -> handleLiteral(lexeme)
             State.Variable -> handleVariable(lexeme)
-            State.Declaration -> handleDeclaration(lexeme)
-            State.Assignment -> handleAssignment(lexeme)
             State.Operator -> handleOperator(lexeme)
             State.Prefix -> handlePrefix(lexeme)
             State.Postfix -> handlePostfix(lexeme)
@@ -65,40 +61,30 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
             ast.expression = childExpression
             State.Defer
         }
-        lexeme.token == Token.Var -> {
-            ast.expression = Declaration(lexeme)
-            State.Declaration
+        lexeme.token == Token.NewLine -> {
+            if(ast.lexeme.token == Token.LeftParenthesis) State.Start
+            else processEnd(lexeme)
         }
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
     private fun handleLiteral(lexeme: Lexeme): State = when {
         lexeme.token.isBinaryOperator -> processOperator(lexeme)
-        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput -> processEnd(lexeme)
+        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput || lexeme.token == Token.Semicolon -> processEnd(lexeme)
+        lexeme.token == Token.NewLine -> {
+            if (ast.lexeme.token == Token.LeftParenthesis) State.Literal
+            else processEnd(lexeme)
+        }
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
     private fun handleVariable(lexeme: Lexeme): State = when {
         lexeme.token.isBinaryOperator -> processOperator(lexeme)
         lexeme.token.isPostfixOperator -> processPostfix(lexeme)
-        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput -> processEnd(lexeme)
-        else -> throw CompilationException("Unexpected token", lexeme)
-    }
-
-    private fun handleDeclaration(lexeme: Lexeme): State = when {
-        lexeme.token.isVariable -> {
-            (ast.expression as Declaration).variable = Variable(lexeme)
-            State.Assignment
-        }
-        else -> throw CompilationException("Unexpected token", lexeme)
-    }
-
-    private fun handleAssignment(lexeme: Lexeme): State = when {
-        lexeme.token.isAssignment -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            (ast.expression as Declaration).expression = childExpression
-            State.Defer
+        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput || lexeme.token == Token.Semicolon -> processEnd(lexeme)
+        lexeme.token == Token.NewLine -> {
+            if (ast.lexeme.token == Token.LeftParenthesis) State.Variable
+            else processEnd(lexeme)
         }
         else -> throw CompilationException("Unexpected token", lexeme)
     }
@@ -146,13 +132,17 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
             (currentOperator as PrefixOperator).child = childExpression
             State.Defer
         }
-        lexeme.token == Token.NewLine -> State.Operator
+        lexeme.token == Token.NewLine -> State.Prefix
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
     private fun handlePostfix(lexeme: Lexeme): State = when {
         lexeme.token.isBinaryOperator -> processOperator(lexeme)
-        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput -> processEnd(lexeme)
+        lexeme.token == Token.RightParenthesis || lexeme.token == Token.EndOfInput || lexeme.token == Token.Semicolon -> processEnd(lexeme)
+        lexeme.token == Token.NewLine -> {
+            if (ast.lexeme.token == Token.LeftParenthesis) State.Postfix
+            else processEnd(lexeme)
+        }
         else -> throw CompilationException("Unexpected token", lexeme)
     }
 
@@ -160,7 +150,9 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
         val child = child
         return if (child != null && !child.finished) {
             child.input(lexeme)
-            if(lexeme.token == Token.EndOfInput) {
+            if (child.finished && (lexeme.token == Token.EndOfInput ||
+                            lexeme.token == Token.NewLine ||
+                            lexeme.token == Token.Semicolon)) {
                 processEnd(lexeme)
             } else {
                 State.Defer
@@ -168,7 +160,15 @@ class ExpressionParser(override val ast: ScopedExpression): Parser<ScopedExpress
         } else when (lexeme.token) {
             Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
             Token.Increment, Token.Decrement -> processPostfix(lexeme)
-            Token.RightParenthesis, Token.EndOfInput -> processEnd(lexeme)
+            Token.Semicolon, Token.EndOfInput -> {
+                if (ast.lexeme.token != Token.LeftParenthesis) processEnd(lexeme)
+                else throw CompilationException("Unexpected end of expression", lexeme)
+            }
+            Token.NewLine -> {
+                if (ast.lexeme.token != Token.LeftParenthesis) processEnd(lexeme)
+                else State.Defer
+            }
+            Token.RightParenthesis -> processEnd(lexeme)
             else -> throw CompilationException("Unexpected token", lexeme)
         }
     }

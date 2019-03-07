@@ -19,8 +19,6 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
         Start,
         Declaration,
         Variable,
-        Assignment,
-        Expression,
         Defer,
         End
     }
@@ -31,8 +29,6 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             State.Start -> handleStart(lexeme)
             State.Declaration -> handleDeclaration(lexeme)
             State.Variable -> handleVariable(lexeme)
-            State.Assignment -> handleAssignment(lexeme)
-            State.Expression -> handleExpression(lexeme)
             State.Defer -> handleDefer(lexeme)
             State.End -> throw IllegalStateException()
         }
@@ -47,21 +43,11 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             ast.expression = Variable(lexeme)
             State.Variable
         }
-        lexeme.token.isPrefixOperator -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            ast.expression = childExpression
+        else -> {
+            child = ExpressionParser(ast)
             child?.input(lexeme)
             State.Defer
         }
-        lexeme.token.isLiteral -> {
-            val childExpression = ScopedExpression(lexeme)
-            child = ExpressionParser(childExpression)
-            ast.expression = childExpression
-            child?.input(lexeme)
-            State.Defer
-        }
-        else -> throw CompilationException("Unexpected token", lexeme)
     }
 
     private fun handleDeclaration(lexeme: Lexeme): State = when {
@@ -90,18 +76,34 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             }
             else -> throw CompilationException("Unexpected token", lexeme)
         }
-        else -> throw CompilationException("Unexpected token", lexeme)
+        else -> {
+            child = ExpressionParser(ast)
+            child?.input(ast.expression!!.lexeme)
+            child?.input(lexeme)
+            State.Defer
+        }
     }
 
-    private fun handleAssignment(lexeme: Lexeme): State = when {
-        else -> throw CompilationException("Unexpected token", lexeme)
+    private fun handleDefer(lexeme: Lexeme): State {
+            val child = child
+        return if (child != null && !child.finished) {
+            child.input(lexeme)
+            if(child.finished && (lexeme.token == Token.EndOfInput ||
+                            lexeme.token == Token.NewLine ||
+                            lexeme.token == Token.Semicolon)) {
+                processEnd(lexeme)
+            } else {
+                State.Defer
+            }
+        } else when (lexeme.token) {
+            Token.Semicolon, Token.NewLine, Token.EndOfInput -> processEnd(lexeme)
+            else -> throw CompilationException("Unexpected token", lexeme)
+        }
     }
 
-    private fun handleExpression(lexeme: Lexeme): State = when {
-        else -> throw CompilationException("Unexpected token", lexeme)
-    }
-
-    private fun handleDefer(lexeme: Lexeme): State = when {
-        else -> throw CompilationException("Unexpected token", lexeme)
+    private fun processEnd(lexeme: Lexeme): State {
+        ast.end = lexeme
+        ast.linkHierarchy()
+        return State.End
     }
 }

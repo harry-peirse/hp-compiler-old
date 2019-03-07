@@ -77,6 +77,8 @@ enum class Token(val symbol: kotlin.String? = null,
 
     // Special Tokens
     Dereference("."),
+    Comma(","),
+    Semicolon(";"),
     NewLine("\n"),
     StartOfInput,
     EndOfInput;
@@ -97,7 +99,11 @@ interface Parser<T: AST> {
     fun input(lexeme: Lexeme)
 }
 
-sealed class AST {
+interface HasLexeme {
+    val lexeme: Lexeme
+}
+
+sealed class AST: HasLexeme {
     var parent: AST? = null
     val depth: Int
         get() {
@@ -115,7 +121,7 @@ sealed class AST {
     abstract fun linkHierarchy()
 }
 
-data class ScopedExpression(val lexeme: Lexeme,
+data class ScopedExpression(override val lexeme: Lexeme,
                             var end: Lexeme? = null,
                             var expression: AST? = null) : AST() {
     override fun linkHierarchy() {
@@ -126,7 +132,7 @@ data class ScopedExpression(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}ScopedExpression(lexeme=$lexeme, end=$end, expression=$expression)"
 }
 
-data class BinaryOperator(val lexeme: Lexeme,
+data class BinaryOperator(override val lexeme: Lexeme,
                           var left: AST? = null,
                           var right: AST? = null) : AST() {
     override fun linkHierarchy() {
@@ -139,7 +145,7 @@ data class BinaryOperator(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}BinaryOperator  (lexeme=$lexeme, left=$left, right=$right)"
 }
 
-data class PrefixOperator(val lexeme: Lexeme,
+data class PrefixOperator(override val lexeme: Lexeme,
                           var child: AST? = null) : AST() {
     override fun linkHierarchy() {
         child?.parent = this
@@ -149,7 +155,7 @@ data class PrefixOperator(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}PrefixOperator  (lexeme=$lexeme, child=$child)"
 }
 
-data class Declaration(val lexeme: Lexeme,
+data class Declaration(override val lexeme: Lexeme,
                        var variable: AST? = null,
                        var expression: AST? = null) : AST() {
     override fun linkHierarchy() {
@@ -162,7 +168,7 @@ data class Declaration(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}Declaration     (lexeme=$lexeme, variable=$variable, expression=$expression)"
 }
 
-data class Assignment(val lexeme: Lexeme,
+data class Assignment(override val lexeme: Lexeme,
                       var variable: AST? = null,
                       var expression: AST? = null) : AST() {
     override fun linkHierarchy() {
@@ -175,7 +181,7 @@ data class Assignment(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}Assignment      (lexeme=$lexeme, variable=$variable, expression=$expression)"
 }
 
-data class PostfixOperator(val lexeme: Lexeme,
+data class PostfixOperator(override val lexeme: Lexeme,
                            var child: AST? = null) : AST() {
     override fun linkHierarchy() {
         child?.parent = this
@@ -185,12 +191,12 @@ data class PostfixOperator(val lexeme: Lexeme,
     override fun toString(): String = "\n${depthString}PostfixOperator (lexeme=$lexeme, child=$child)"
 }
 
-data class Literal(val lexeme: Lexeme) : AST() {
+data class Literal(override val lexeme: Lexeme) : AST() {
     override fun linkHierarchy() = Unit
     override fun toString(): String = "\n${depthString}Literal         (lexeme=$lexeme)"
 }
 
-data class Variable(val lexeme: Lexeme) : AST() {
+data class Variable(override val lexeme: Lexeme) : AST() {
     override fun linkHierarchy() = Unit
     override fun toString(): String = "\n${depthString}Variable        (lexeme=$lexeme)"
 }
