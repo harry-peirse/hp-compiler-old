@@ -62,7 +62,7 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
             State.Defer
         }
         lexeme.token == Token.NewLine -> {
-            if(ast.lexeme.token == Token.LeftParenthesis) State.Start
+            if(ast.lexeme.token == Token.LeftParenthesis || ast.lexeme.token.isAssignment) State.Start
             else processEnd(lexeme)
         }
         else -> throw CompilationException("Unexpected token", lexeme)

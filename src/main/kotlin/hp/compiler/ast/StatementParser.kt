@@ -89,8 +89,8 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
         return if (child != null && !child.finished) {
             child.input(lexeme)
             if(child.finished && (lexeme.token == Token.EndOfInput ||
-                            lexeme.token == Token.NewLine ||
-                            lexeme.token == Token.Semicolon)) {
+                            lexeme.token == Token.Semicolon || (
+                            lexeme.token == Token.NewLine && Token.LeftParenthesis != ast.lexeme.token))) {
                 processEnd(lexeme)
             } else {
                 State.Defer

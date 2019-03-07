@@ -285,7 +285,7 @@ class TestStatementParser {
 
         assertEquals(expected, parser.ast)
     }
-    
+
     @Test
     fun `var a = 123`() {
         val lexer = Lexer(" var a = 123 ")
@@ -322,6 +322,31 @@ class TestStatementParser {
                                                         Variable(lexemes[7]))),
                                         PostfixOperator(lexemes[11],
                                                 Variable(lexemes[10]))))))
+        expected.linkHierarchy()
+
+        assertEquals(expected, parser.ast)
+    }
+
+    @Test
+    fun `var a = newline 1 + newline (3 newline ) - ++ newline b newline`() {
+        val lexer = Lexer(" var a = \n 1 + \n (3 \n ) - ++ \n b \n")
+        val lexemes = lexer.allLexemes()
+
+        val parser = StatementParser(ScopedExpression(lexemes[0]))
+        lexemes.subList(1, lexemes.size).forEach { parser.input(it) }
+
+        val expected = ScopedExpression(lexemes[0], lexemes[16],
+                Declaration(lexemes[1],
+                        Variable(lexemes[2]),
+                        ScopedExpression(lexemes[3], lexemes[16],
+                                BinaryOperator(lexemes[12],
+                                        BinaryOperator(lexemes[6],
+                                                Literal(lexemes[5]),
+                                                ScopedExpression(lexemes[8], lexemes[11],
+                                                        Literal(lexemes[9]))
+                                        ),
+                                        PrefixOperator(lexemes[13],
+                                                Variable(lexemes[15]))))))
         expected.linkHierarchy()
 
         assertEquals(expected, parser.ast)
