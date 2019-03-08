@@ -1,5 +1,6 @@
 package hp.compiler
 
+import hp.compiler.lexer.Lexer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

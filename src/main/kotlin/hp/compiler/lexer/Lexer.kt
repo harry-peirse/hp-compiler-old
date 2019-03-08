@@ -1,5 +1,9 @@
-package hp.compiler
+package hp.compiler.lexer
 
+import hp.compiler.CompilationException
+import hp.compiler.Lexeme
+import hp.compiler.Position
+import hp.compiler.Token
 import java.lang.IllegalStateException
 
 interface State

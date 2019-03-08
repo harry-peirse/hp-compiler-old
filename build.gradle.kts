@@ -8,7 +8,7 @@ plugins {
 }
 
 application {
-    mainClassName = "hp.compiler.CLIInterpreterKt"
+    mainClassName = "hp.interpreter.InterpreterKt"
 }
 
 repositories {

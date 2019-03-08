@@ -24,7 +24,7 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
     }
 
     private val fsm = FSM<State, Lexeme>(State.Start, State.End) { state, lexeme ->
-        println("${state.toString().padEnd(11)} $lexeme")
+        if(DEBUG_LOGGING) println("${this.toString().padEnd(50)} ${state.toString().padEnd(11)} $lexeme")
         when (state) {
             State.Start -> handleStart(lexeme)
             State.Declaration -> handleDeclaration(lexeme)
@@ -43,10 +43,12 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             ast.expression = Variable(lexeme)
             State.Variable
         }
+        lexeme.token == Token.NewLine || lexeme.token == Token.Semicolon -> processEnd(lexeme)
         else -> {
             child = ExpressionParser(ast)
             child?.input(lexeme)
-            State.Defer
+            if (child!!.finished) processEnd(lexeme)
+            else State.Defer
         }
     }
 
@@ -80,15 +82,16 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             child = ExpressionParser(ast)
             child?.input(ast.expression!!.lexeme)
             child?.input(lexeme)
-            State.Defer
+            if(child!!.finished) processEnd(lexeme)
+            else State.Defer
         }
     }
 
     private fun handleDefer(lexeme: Lexeme): State {
-            val child = child
+        val child = child
         return if (child != null && !child.finished) {
             child.input(lexeme)
-            if(child.finished && (lexeme.token == Token.EndOfInput ||
+            if (child.finished && (lexeme.token == Token.EndOfInput ||
                             lexeme.token == Token.Semicolon || (
                             lexeme.token == Token.NewLine && Token.LeftParenthesis != ast.lexeme.token))) {
                 processEnd(lexeme)

@@ -27,7 +27,7 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
     }
 
     private val fsm = FSM<State, Lexeme>(State.Start, State.End) { state, lexeme ->
-        println("${state.toString().padEnd(11)} $lexeme")
+        if(DEBUG_LOGGING) println("${this.toString().padEnd(50)} ${state.toString().padEnd(11)} $lexeme")
         when (state) {
             State.Start -> handleStart(lexeme)
             State.Literal -> handleLiteral(lexeme)
@@ -157,25 +157,25 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
             } else {
                 State.Defer
             }
-        } else when (lexeme.token) {
-            Token.Plus, Token.Minus, Token.Times, Token.Divide -> processOperator(lexeme)
-            Token.Increment, Token.Decrement -> processPostfix(lexeme)
-            Token.Semicolon, Token.EndOfInput -> {
+        } else when {
+            lexeme.token.isBinaryOperator -> processOperator(lexeme)
+            lexeme.token.isPostfixOperator -> processPostfix(lexeme)
+            lexeme.token == Token.Semicolon || lexeme.token == Token.EndOfInput -> {
                 if (ast.lexeme.token != Token.LeftParenthesis) processEnd(lexeme)
                 else throw CompilationException("Unexpected end of expression", lexeme)
             }
-            Token.NewLine -> {
+            lexeme.token == Token.NewLine -> {
                 if (ast.lexeme.token != Token.LeftParenthesis) processEnd(lexeme)
                 else State.Defer
             }
-            Token.RightParenthesis -> processEnd(lexeme)
+            lexeme.token == Token.RightParenthesis -> processEnd(lexeme)
             else -> throw CompilationException("Unexpected token", lexeme)
         }
     }
 
     private fun processOperator(lexeme: Lexeme): State {
         val ancestor = ast.expression
-        if (ancestor is BinaryOperator && !ancestor.lexeme.token.highPriority && lexeme.token.highPriority) {
+        if (ancestor is BinaryOperator && ((!ancestor.lexeme.token.highPriority && lexeme.token.highPriority) || lexeme.token == Token.Power)) {
             val binary = BinaryOperator(lexeme, left = ancestor.right)
             ancestor.right = binary
             currentOperator = binary
