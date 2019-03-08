@@ -64,6 +64,9 @@ fun Assignment.evaluate(): String {
     } else throw CompilationException("Can't use variable before declaring it", lexeme)
 }
 
+fun Scope.evaluate(): String =
+    children.joinToString("\n") { it.evaluate() }
+
 fun AST.evaluate(): String = when (this) {
     is ScopedExpression -> this.evaluate()
     is Variable -> this.evaluate()
@@ -73,6 +76,7 @@ fun AST.evaluate(): String = when (this) {
     is PostfixOperator -> this.evaluate()
     is Declaration -> this.evaluate()
     is Assignment -> this.evaluate()
+    is Scope -> this.evaluate()
 }
 
 fun main(args: Array<String>) {

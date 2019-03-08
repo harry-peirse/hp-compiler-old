@@ -1,6 +1,6 @@
 package hp.compiler.ast
 
-const val DEBUG_LOGGING = false
+const val DEBUG_LOGGING = true
 
 class FSM<S, T : Any>(initialState: S, private val exitState: S, private val transitionTable: (S, T) -> S) {
 

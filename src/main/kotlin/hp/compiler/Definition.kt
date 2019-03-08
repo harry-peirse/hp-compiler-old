@@ -4,7 +4,8 @@ package hp.compiler
 
 class CompilationException(message: String) : Exception(message) {
     constructor(message: String, position: Position) : this("$message $position")
-    constructor(message: String, lexeme: Lexeme) : this("$message: '${lexeme.token.symbol ?: lexeme.value}' ${lexeme.position}")
+    constructor(message: String, lexeme: Lexeme) : this("$message: '${lexeme.token.symbol
+            ?: lexeme.value}' ${lexeme.position}")
 }
 
 
@@ -91,12 +92,13 @@ data class Position(val row: Int = -1, val col: Int = -1, val sourceFile: String
 }
 
 data class Lexeme(val token: Token, val position: Position? = null, val value: String? = null) {
-    override fun toString() = "$position ${token.toString().padEnd(16)} ${(value ?: "").padStart(5)}"
+    override fun toString() = "$position $token ${if (value == null) "" else "'$value'"}"
 }
 
 /** ABSTRACT SYNTAX TREE DEFINITIONS **/
 
-interface Parser<T: AST> {
+interface Parser<T : AST> {
+    val finished: Boolean
     val ast: T
     fun input(lexeme: Lexeme)
 }
@@ -105,12 +107,9 @@ interface Lexed {
     val lexeme: Lexeme
 }
 
-interface Parent {
-    val children: List<AST>
-}
-
-sealed class AST: Lexed {
+sealed class AST : Lexed {
     var parent: AST? = null
+    open val type: Type = Types.Nothing
     val depth: Int
         get() {
             var count = 0
@@ -121,10 +120,16 @@ sealed class AST: Lexed {
             }
             return count
         }
-    val depthString: String 
+    val depthString: String
         get() = "    ".repeat(depth)
 
-    abstract fun linkHierarchy()
+    open val children: List<AST> = emptyList()
+    fun linkHierarchy() {
+        children.forEach {
+            it.parent = this
+            it.linkHierarchy()
+        }
+    }
 }
 
 object Types {
@@ -140,111 +145,78 @@ object Types {
     val Nothing = Type("Nothing", Integer.MAX_VALUE)
 }
 
-sealed class TypedAST : AST() {
-    abstract val type: Type
+data class Scope(override val lexeme: Lexeme,
+                 var end: Lexeme? = null,
+                 override val children: MutableList<AST> = mutableListOf()) : AST() {
+    override fun toString(): String = "\n${depthString}Scope $lexeme to $end ${children.joinToString("")}"
 }
 
 data class ScopedExpression(override val lexeme: Lexeme,
                             var end: Lexeme? = null,
-                            var expression: TypedAST? = null) : TypedAST(), Parent {
+                            var expression: AST? = null) : AST() {
     override val children get() = listOfNotNull(expression)
     override val type get() = expression?.type ?: Types.Nothing
-    override fun linkHierarchy() {
-        expression?.parent = this
-        expression?.linkHierarchy()
-    }
-
-    override fun toString(): String = "\n${depthString}ScopedExpression(lexeme=$lexeme, end=$end, expression=$expression)"
+    override fun toString(): String = "\n${depthString}ScopedExpression $lexeme to $end $expression"
 }
 
 data class BinaryOperator(override val lexeme: Lexeme,
-                          var left: TypedAST? = null,
-                          var right: TypedAST? = null) : TypedAST(), Parent {
+                          var left: AST? = null,
+                          var right: AST? = null) : AST() {
     override val children get() = listOfNotNull(left, right)
-    override val type get() = if(left?.type ?: Types.Nothing > right?.type ?: Types.Nothing) left?.type ?: Types.Nothing else right?.type ?: Types.Nothing
-    override fun linkHierarchy() {
-        left?.parent = this
-        left?.linkHierarchy()
-        right?.parent = this
-        right?.linkHierarchy()
-    }
+    override val type
+        get() = if (left?.type ?: Types.Nothing > right?.type ?: Types.Nothing) left?.type
+                ?: Types.Nothing else right?.type ?: Types.Nothing
 
-    override fun toString(): String = "\n${depthString}BinaryOperator  (lexeme=$lexeme, left=$left, right=$right)"
+    override fun toString(): String = "\n${depthString}BinaryOperator   $lexeme $left $right"
 }
 
 data class PrefixOperator(override val lexeme: Lexeme,
-                          var child: TypedAST? = null) : TypedAST(), Parent {
+                          var child: AST? = null) : AST() {
     override val children get() = listOfNotNull(child)
     override val type get() = child?.type ?: Types.Nothing
-    override fun linkHierarchy() {
-        child?.parent = this
-        child?.linkHierarchy()
-    }
-
-    override fun toString(): String = "\n${depthString}PrefixOperator  (lexeme=$lexeme, child=$child)"
+    override fun toString(): String = "\n${depthString}PrefixOperator   $lexeme $child"
 }
 
 data class Declaration(override val lexeme: Lexeme,
-                       var variable: TypedAST? = null,
-                       var expression: TypedAST? = null) : TypedAST(), Parent {
-    override val type = Types.Nothing
+                       var variable: AST? = null,
+                       var expression: AST? = null) : AST() {
     override val children get() = listOfNotNull(variable, expression)
-    override fun linkHierarchy() {
-        variable?.parent = this
-        variable?.linkHierarchy()
-        expression?.parent = this
-        expression?.linkHierarchy()
-    }
-
-    override fun toString(): String = "\n${depthString}Declaration     (lexeme=$lexeme, variable=$variable, expression=$expression)"
+    override fun toString(): String = "\n${depthString}Declaration      $lexeme $variable $expression"
 }
 
 data class Assignment(override val lexeme: Lexeme,
-                      var variable: TypedAST? = null,
-                      var expression: TypedAST? = null) : TypedAST(), Parent {
-    override val type = Types.Nothing
+                      var variable: AST? = null,
+                      var expression: AST? = null) : AST() {
     override val children get() = listOfNotNull(variable, expression)
-    override fun linkHierarchy() {
-        variable?.parent = this
-        variable?.linkHierarchy()
-        expression?.parent = this
-        expression?.linkHierarchy()
-    }
-
-    override fun toString(): String = "\n${depthString}Assignment      (lexeme=$lexeme, variable=$variable, expression=$expression)"
+    override fun toString(): String = "\n${depthString}Assignment       $lexeme $variable $expression"
 }
 
 data class PostfixOperator(override val lexeme: Lexeme,
-                           var child: TypedAST? = null) : TypedAST(), Parent {
+                           var child: AST? = null) : AST() {
     override val children get() = listOfNotNull(child)
     override val type get() = child?.type ?: Types.Nothing
-    override fun linkHierarchy() {
-        child?.parent = this
-        child?.linkHierarchy()
-    }
-
-    override fun toString(): String = "\n${depthString}PostfixOperator (lexeme=$lexeme, child=$child)"
+    override fun toString(): String = "\n${depthString}PostfixOperator  $lexeme $child"
 }
 
-data class Literal(override val lexeme: Lexeme) : TypedAST() {
-    override val type get() = when(lexeme.token) {
-        Token.Byte -> Types.Byte
-        Token.Character -> Types.Char
-        Token.Short -> Types.Short
-        Token.Integer -> Types.Int
-        Token.Long -> Types.Long
-        Token.Float -> Types.Float
-        Token.Double -> Types.Double
-        Token.True, Token.False -> Types.Boolean
-        Token.String -> Types.String
-        else -> throw CompilationException("Unexpected type", lexeme)
-    }
-    override fun linkHierarchy() = Unit
+data class Literal(override val lexeme: Lexeme) : AST() {
+    override val type
+        get() = when (lexeme.token) {
+            Token.Byte -> Types.Byte
+            Token.Character -> Types.Char
+            Token.Short -> Types.Short
+            Token.Integer -> Types.Int
+            Token.Long -> Types.Long
+            Token.Float -> Types.Float
+            Token.Double -> Types.Double
+            Token.True, Token.False -> Types.Boolean
+            Token.String -> Types.String
+            else -> throw CompilationException("Unexpected type", lexeme)
+        }
+
     override fun toString(): String = "\n${depthString}Literal         (lexeme=$lexeme)"
 }
 
-data class Variable(override val lexeme: Lexeme, override var type: Type = Types.Nothing) : TypedAST() {
-    override fun linkHierarchy() = Unit
+data class Variable(override val lexeme: Lexeme) : AST() {
     override fun toString(): String = "\n${depthString}Variable        (lexeme=$lexeme)"
 }
 

@@ -5,7 +5,7 @@ import java.lang.IllegalStateException
 
 class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpression> {
 
-    val finished get() = fsm.finished
+    override val finished get() = fsm.finished
 
     override fun input(lexeme: Lexeme) {
         if (!finished) {
@@ -43,7 +43,7 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
             ast.expression = Variable(lexeme)
             State.Variable
         }
-        lexeme.token == Token.NewLine || lexeme.token == Token.Semicolon -> processEnd(lexeme)
+        lexeme.token == Token.NewLine || lexeme.token == Token.Semicolon || lexeme.token == Token.RightBrace -> processEnd(lexeme)
         else -> {
             child = ExpressionParser(ast)
             child?.input(lexeme)
@@ -92,6 +92,7 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
         return if (child != null && !child.finished) {
             child.input(lexeme)
             if (child.finished && (lexeme.token == Token.EndOfInput ||
+                            lexeme.token == Token.RightBrace ||
                             lexeme.token == Token.Semicolon || (
                             lexeme.token == Token.NewLine && Token.LeftParenthesis != ast.lexeme.token))) {
                 processEnd(lexeme)
@@ -99,7 +100,7 @@ class StatementParser(override val ast: ScopedExpression) : Parser<ScopedExpress
                 State.Defer
             }
         } else when (lexeme.token) {
-            Token.Semicolon, Token.NewLine, Token.EndOfInput -> processEnd(lexeme)
+            Token.Semicolon, Token.NewLine, Token.EndOfInput, Token.RightBrace -> processEnd(lexeme)
             else -> throw CompilationException("Unexpected token", lexeme)
         }
     }
