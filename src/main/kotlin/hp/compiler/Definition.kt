@@ -17,33 +17,40 @@ enum class Token(val symbol: kotlin.String? = null,
                  val isBinaryOperator: kotlin.Boolean = false,
                  val isPrefixOperator: kotlin.Boolean = false,
                  val isPostfixOperator: kotlin.Boolean = false,
-                 val isValueType: kotlin.Boolean = false,
+                 val onlyForVariables: kotlin.Boolean = false,
+                 val worksWithPostfix: kotlin.Boolean = false,
                  val isAssignment: kotlin.Boolean = false,
                  val isVariable: kotlin.Boolean = false,
-                 val isLiteral: kotlin.Boolean = false) {
+                 val isLiteral: kotlin.Boolean = false,
+                 val type: Type = Types.Nothing) {
     // Literals
-    Byte(isValueType = true, isLiteral = true),
-    Character(isValueType = true, isLiteral = true),
-    Short(isValueType = true, isLiteral = true),
-    Integer(isValueType = true, isLiteral = true),
-    Long(isValueType = true, isLiteral = true),
-    Float(isValueType = true, isLiteral = true),
-    Double(isValueType = true, isLiteral = true),
-    True("true", isKeyword = true, isValueType = true, isLiteral = true),
-    False("false", isKeyword = true, isValueType = true, isLiteral = true),
-    String(isValueType = true, isLiteral = true),
+    Binary(isLiteral = true, type = Types.Byte),
+    Hex(isLiteral = true, type = Types.Byte),
+    Int(isLiteral = true, type = Types.Int),
+    Float(isLiteral = true, type = Types.Float),
+    True("true", isKeyword = true, isLiteral = true, type = Types.Bool),
+    False("false", isKeyword = true, isLiteral = true, type = Types.Bool),
+//    Char(isLiteral = true, type = Types.Char),
+//    String(isLiteral = true, type = Types.String),
 
     // Identifiers
-    Identifier(isValueType = true, isVariable = true),
+    Identifier(isVariable = true),
+
+    // Bitwise Operators
+    LeftShift("<<", isBinaryOperator = true),
+    RightShift(">>", isBinaryOperator = true),
+    BitwiseAnd("&", isBinaryOperator = true),
+    BitwiseOr("|", isBinaryOperator = true),
 
     // Arithmetic Operators
-    Plus("+", isBinaryOperator = true, isPrefixOperator = true),
-    Minus("-", isBinaryOperator = true, isPrefixOperator = true),
+    Plus("+", isBinaryOperator = true, isPrefixOperator = true, worksWithPostfix = true),
+    Minus("-", isBinaryOperator = true, isPrefixOperator = true, worksWithPostfix = true),
     Times("*", highPriority = true, isBinaryOperator = true),
     Divide("/", highPriority = true, isBinaryOperator = true),
-    Power("^", highPriority = true, isBinaryOperator = true),
-    Increment("++", isPrefixOperator = true, isPostfixOperator = true),
-    Decrement("--", isPrefixOperator = true, isPostfixOperator = true),
+//    Power("^", highPriority = true, isBinaryOperator = true),
+//    Modulus("%", isBinaryOperator = true),
+    Increment("++", isPrefixOperator = true, isPostfixOperator = true, onlyForVariables = true),
+    Decrement("--", isPrefixOperator = true, isPostfixOperator = true, onlyForVariables = true),
 
     // Comparison Operators
     GreaterThan(">", isBinaryOperator = true),
@@ -56,12 +63,11 @@ enum class Token(val symbol: kotlin.String? = null,
     // Logical Operators
     And("&&", isBinaryOperator = true),
     Or("||", isBinaryOperator = true),
-    XOr("|", isBinaryOperator = true),
     Not("!", isPrefixOperator = true),
 
     // Assignment Operators
     Assign("=", isAssignment = true),
-    TypeDenotation(":", isAssignment = true),
+//    TypeDenotation(":", isAssignment = true),
     PlusAssign("+=", isBinaryOperator = true, isAssignment = true),
     MinusAssign("-=", isBinaryOperator = true, isAssignment = true),
     TimesAssign("*=", isBinaryOperator = true, isAssignment = true),
@@ -80,7 +86,7 @@ enum class Token(val symbol: kotlin.String? = null,
 
     // Special Tokens
     Dereference("."),
-    Comma(","),
+//    Comma(","),
     Semicolon(";"),
     NewLine("\n"),
     StartOfInput,
@@ -135,13 +141,11 @@ sealed class AST : Lexed {
 object Types {
     val Byte = Type("Byte", 2)
     val Char = Type("Char", 3)
-    val Short = Type("Short", 4)
     val Int = Type("Int", 5)
-    val Long = Type("Long", 6)
     val Float = Type("Float", 7)
-    val Double = Type("Double", 8)
-    val Boolean = Type("Boolean")
+    val Bool = Type("Boolean")
     val String = Type("String")
+    val Unit = Type("Unit")
     val Nothing = Type("Nothing", Integer.MAX_VALUE)
 }
 
@@ -200,18 +204,7 @@ data class PostfixOperator(override val lexeme: Lexeme,
 
 data class Literal(override val lexeme: Lexeme) : AST() {
     override val type
-        get() = when (lexeme.token) {
-            Token.Byte -> Types.Byte
-            Token.Character -> Types.Char
-            Token.Short -> Types.Short
-            Token.Integer -> Types.Int
-            Token.Long -> Types.Long
-            Token.Float -> Types.Float
-            Token.Double -> Types.Double
-            Token.True, Token.False -> Types.Boolean
-            Token.String -> Types.String
-            else -> throw CompilationException("Unexpected type", lexeme)
-        }
+        get() = lexeme.token.type
 
     override fun toString(): String = "\n${depthString}Literal         (lexeme=$lexeme)"
 }

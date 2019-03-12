@@ -135,7 +135,7 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
 
     private fun handlePrefix(lexeme: Lexeme): State = when {
         lexeme.token.isLiteral -> {
-            if ((currentOperator as PrefixOperator).lexeme.token == Token.Increment || (currentOperator as PrefixOperator).lexeme.token == Token.Decrement) {
+            if (currentOperator?.lexeme?.token?.onlyForVariables == true) {
                 throw CompilationException("Illegal operator", lexeme)
             }
             (currentOperator as PrefixOperator).child = Literal(lexeme)
@@ -202,7 +202,7 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
 
     private fun processOperator(lexeme: Lexeme): State {
         val ancestor = ast.expression
-        if (ancestor is BinaryOperator && ((!ancestor.lexeme.token.highPriority && lexeme.token.highPriority) || lexeme.token == Token.Power)) {
+        if (ancestor is BinaryOperator && ((!ancestor.lexeme.token.highPriority && lexeme.token.highPriority))) {
             val binary = BinaryOperator(lexeme, left = ancestor.right)
             ancestor.right = binary
             currentOperator = binary
@@ -222,8 +222,7 @@ class ExpressionParser(override val ast: ScopedExpression) : Parser<ScopedExpres
                 (currentOperator as BinaryOperator).right = unary
             }
             is PrefixOperator -> {
-                if ((currentOperator as PrefixOperator).lexeme.token == Token.Minus ||
-                        (currentOperator as PrefixOperator).lexeme.token == Token.Plus) {
+                if (currentOperator?.lexeme?.token?.worksWithPostfix == true) {
                     unary.child = (currentOperator as PrefixOperator).child
                     (currentOperator as PrefixOperator).child = unary
                 } else {

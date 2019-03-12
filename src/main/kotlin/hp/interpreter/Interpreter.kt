@@ -40,14 +40,54 @@ fun PostfixOperator.evaluate(): String = when (lexeme.token) {
 }
 
 fun BinaryOperator.evaluate(): String {
-    val left = left!!.evaluate().toFloat()
-    val right = right!!.evaluate().toFloat()
+    var left = this.left!!.evaluate()
+    var right = this.right!!.evaluate()
     return when (lexeme.token) {
-        Token.Plus -> (left + right).toString()
-        Token.Minus -> (left - right).toString()
-        Token.Times -> (left * right).toString()
-        Token.Divide -> (left / right).toString()
-        Token.Power -> (left.pow(right)).toString()
+        Token.Plus -> (left.toFloat() + right.toFloat()).toString()
+        Token.Minus -> (left.toFloat() - right.toFloat()).toString()
+        Token.Times -> (left.toFloat() * right.toFloat()).toString()
+        Token.Divide -> (left.toFloat() / right.toFloat()).toString()
+//        Token.Power -> (left.pow(right)).toString()
+        Token.BitwiseAnd -> {
+            val length = if(left.length > right.length) left.length else right.length
+            left = left.padStart(length, '0')
+            right = right.padStart(length, '0')
+            var result = ""
+
+            for(i in 0 until length) {
+                result += if(left[i] == '1' && right[i] == '1') '1' else '0'
+            }
+
+            result
+        }
+        Token.BitwiseOr -> {
+            val length = if(left.length > right.length) left.length else right.length
+            left = left.padStart(length, '0')
+            right = right.padStart(length, '0')
+            var result = ""
+
+            for(i in 0 until length) {
+                result += if(left[i] == '1' || right[i] == '1') '1' else '0'
+            }
+
+            result
+        }
+        Token.LeftShift -> {
+            val shiftAmount = right.toInt()
+
+            var result = left.padEnd(left.length + shiftAmount, '0')
+            result = result.substring(shiftAmount)
+
+            result
+        }
+        Token.RightShift -> {
+            val shiftAmount = right.toInt()
+
+            var result = left.padStart(left.length + shiftAmount, '0')
+            result = result.substring(0, left.length)
+
+            result
+        }
         else -> throw IllegalStateException()
     }
 }
